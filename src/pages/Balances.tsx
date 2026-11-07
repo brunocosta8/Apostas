@@ -113,7 +113,7 @@ function DebtRow({ t, meId, name, byId, betTitle }: {
           <Money cents={iPay ? -t.amountCents : t.amountCents} signed className="font-display text-xl font-extrabold leading-none" />
           {!open && (
             <button type="button" onClick={() => setOpen(true)}
-              className="rounded-full bg-pitch-50 px-2.5 py-0.5 text-xs font-bold text-pitch-700 ring-1 ring-pitch-200 active:bg-pitch-100">
+              className="rounded-lg bg-volt px-3 py-1 text-xs font-bold text-ink shadow-[0_2px_0_var(--color-volt-dark)] active:translate-y-px active:shadow-none">
               Liquidar
             </button>
           )}
