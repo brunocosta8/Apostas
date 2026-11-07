@@ -39,58 +39,39 @@ export function Rivals() {
   if (bets.error) return <><SubHeader title="Confrontos" /><ErrorBox error={bets.error} /></>
   if (!rows) return <><SubHeader title="Confrontos" /><Loading /></>
 
-  const withBets = rows.filter((r) => r.h2h.together > 0)
-  const rival = withBets[0]
-  const victim = [...withBets].sort((a, b) => b.h2h.net - a.h2h.net)[0]
-  const nemesis = [...withBets].sort((a, b) => a.h2h.net - b.h2h.net)[0]
-
   return (
     <>
       <SubHeader title="Confrontos" />
-
-      {withBets.length > 0 && (
-        <div className="pitch mb-5 grid grid-cols-3 divide-x divide-white/15 rounded-xl py-3 text-center text-white shadow-[0_3px_0_var(--color-volt)]">
-          <Highlight label="Maior rival" emoji="⚔️" p={rival.profile} sub={`${rival.h2h.together} apostas`} />
-          <Highlight label="Freguês" emoji="💰" p={victim.h2h.net > 0 ? victim.profile : undefined} sub={victim.h2h.net > 0 ? <Money cents={victim.h2h.net} signed className="text-volt!" /> : null} />
-          <Highlight label="Carrasco" emoji="😈" p={nemesis.h2h.net < 0 ? nemesis.profile : undefined} sub={nemesis.h2h.net < 0 ? <Money cents={nemesis.h2h.net} signed className="text-red-300!" /> : null} />
+      {rows.length === 0 ? (
+        <p className="rounded-xl bg-white px-6 py-10 text-center text-sm text-ink/55">Ainda não há mais ninguém no grupo.</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {rows.map(({ profile, h2h }) => {
+            const none = h2h.together === 0
+            const accent = none ? 'bg-ink/10' : h2h.net > 0 ? 'bg-pitch-500' : h2h.net < 0 ? 'bg-red-500' : 'bg-ink/25'
+            return (
+              <Link key={profile.id} to={`/confrontos/${profile.id}`}
+                className={`relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-2xl bg-white p-3 text-center shadow-[0_1px_2px_rgba(13,27,18,0.06)] active:bg-white/70 ${none ? 'opacity-60' : ''}`}>
+                <span className={`absolute inset-x-0 top-0 h-1.5 ${accent}`} aria-hidden />
+                <Avatar profile={profile} size={44} />
+                <div className="mt-1.5 w-full truncate text-sm font-bold text-ink">{profile.display_name}</div>
+                {none ? (
+                  <div className="mt-2 text-xs font-medium text-ink/50">Ainda sem confrontos</div>
+                ) : (
+                  <>
+                    <Money cents={h2h.net} signed className="mt-1 font-display text-[28px] font-extrabold leading-none" />
+                    <div className="mt-1.5 text-xs font-semibold text-ink/55">
+                      {h2h.together} {h2h.together === 1 ? 'aposta' : 'apostas'}
+                    </div>
+                    <div className="text-xs font-bold text-ink/70">{record(h2h)}</div>
+                  </>
+                )}
+              </Link>
+            )
+          })}
         </div>
       )}
-
-      <div className="space-y-2">
-        {rows.map(({ profile, h2h }) => (
-          <Link key={profile.id} to={`/confrontos/${profile.id}`}
-            className={`flex items-center gap-3 rounded-xl bg-white p-3 shadow-[0_1px_2px_rgba(13,27,18,0.06)] active:bg-white/70 ${h2h.together === 0 ? 'opacity-60' : ''}`}>
-            <Avatar profile={profile} size={42} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-bold text-ink">{profile.display_name}</div>
-              <div className="text-xs font-medium text-ink/55">
-                {h2h.together === 0 ? 'Ainda sem confrontos' : `${h2h.together} ${h2h.together === 1 ? 'aposta' : 'apostas'} · ${record(h2h)}`}
-              </div>
-            </div>
-            {h2h.together > 0 && <Money cents={h2h.net} signed className="shrink-0 font-display text-xl font-extrabold" />}
-            <span className="text-xl text-ink/30" aria-hidden>›</span>
-          </Link>
-        ))}
-        {rows.length === 0 && <p className="rounded-xl bg-white px-6 py-10 text-center text-sm text-ink/55">Ainda não há mais ninguém no grupo.</p>}
-      </div>
     </>
-  )
-}
-
-function Highlight({ label, emoji, p, sub }: { label: string; emoji: string; p?: Profile; sub: React.ReactNode }) {
-  return (
-    <div className="min-w-0 px-2">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-white/60">{emoji} {label}</div>
-      {p ? (
-        <>
-          <div className="mt-1 flex justify-center"><Avatar profile={p} size={30} ring /></div>
-          <div className="mt-1 truncate text-sm font-bold">{p.display_name.split(' ')[0]}</div>
-        </>
-      ) : (
-        <div className="mt-2 text-sm text-white/50">—</div>
-      )}
-      <div className="font-display text-sm font-bold text-white/80">{sub}</div>
-    </div>
   )
 }
 
