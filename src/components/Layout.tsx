@@ -5,6 +5,7 @@ import { useBalances, useRealtimeRefresh } from '../lib/api'
 import { formatSigned } from '../lib/money'
 import { BetSlipProvider } from './BetSlip'
 import { NotificationsWelcome } from './Notifications'
+import { ErrorBoundary } from './ErrorBoundary'
 
 const items = [
   { to: '/', label: 'Início', icon: 'M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z' },
@@ -18,15 +19,20 @@ export function Layout() {
   useRealtimeRefresh(true)
   const { me } = useMe()
   const { pathname } = useLocation()
-  // Cada ecrã novo começa no topo.
-  useEffect(() => window.scrollTo(0, 0), [pathname])
+  // Cada ecrã novo começa no topo. (Chaveta obrigatória: nos browsers recentes
+  // scrollTo devolve uma Promise, e um efeito só pode devolver uma função.)
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
   return (
     <BetSlipProvider>
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
         <AppBar />
         <NotificationsWelcome userId={me.id} />
         <main className="flex-1 px-4 pb-28">
-          <Outlet />
+          <ErrorBoundary resetKey={pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
         <nav className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-ink/10 bg-white">
           <ul className="mx-auto flex max-w-xl items-end justify-around px-2 pt-1.5">
@@ -60,9 +66,6 @@ export function Layout() {
 /** Barra de topo fixa: logótipo e saldo. */
 function AppBar() {
   const { me } = useMe()
-  const { pathname } = useLocation()
-  // Cada ecrã novo começa no topo.
-  useEffect(() => window.scrollTo(0, 0), [pathname])
   const balances = useBalances()
   const bal = balances?.get(me.id) ?? 0
   return (

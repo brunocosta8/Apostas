@@ -18,7 +18,9 @@ function usePushState() {
   const refresh = useCallback(() => {
     getPushState().then(setState).catch(() => setState('unsupported'))
   }, [])
-  useEffect(refresh, [refresh])
+  useEffect(() => {
+    refresh()
+  }, [refresh])
   return [state, refresh] as const
 }
 
