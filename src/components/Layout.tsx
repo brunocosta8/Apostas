@@ -29,7 +29,7 @@ export function Layout() {
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
         <AppBar />
         <NotificationsWelcome userId={me.id} />
-        <main className="flex-1 px-4 pb-28">
+        <main className="flex-1 px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))]">
           <ErrorBoundary resetKey={pathname}>
             <Outlet />
           </ErrorBoundary>
