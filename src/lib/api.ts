@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
 import type { AllowedEmail, Bet, BetMode, Payment, Profile } from './types'
-import type { SettleableBet } from './settlement'
+import { computeBalances, type OddsContext, type SettleableBet } from './settlement'
 
 // ---------------------------------------------------------------------------
 // Leituras (o grupo é pequeno: carregamos tudo e filtramos no cliente)
@@ -93,6 +93,16 @@ export function toSettleable(b: Bet): SettleableBet {
     status: b.status,
     winningOptionId: b.winning_option_id,
     entries: b.bet_entries.map((e) => ({ userId: e.user_id, optionId: e.option_id, amountCents: Number(e.amount_cents) })),
+  }
+}
+
+export function toOddsContext(b: Bet): OddsContext {
+  return {
+    mode: b.mode,
+    creatorId: b.creator_id,
+    oddsCreator: b.odds_creator,
+    oddsTaker: b.odds_taker,
+    entries: toSettleable(b).entries,
   }
 }
 
@@ -191,3 +201,17 @@ export const useRemoveAllowedEmail = () =>
     const { error } = await supabase.from('allowed_emails').delete().eq('email', email)
     if (error) throw error
   }, ['allowed_emails'])
+
+/** Saldo atual de cada pessoa (apostas resolvidas + pagamentos). */
+export function useBalances() {
+  const bets = useBets()
+  const payments = usePayments()
+  const balances = useMemo(() => {
+    if (!bets.data || !payments.data) return null
+    return computeBalances(
+      bets.data.map(toSettleable),
+      payments.data.map((p) => ({ fromUser: p.from_user, toUser: p.to_user, amountCents: Number(p.amount_cents) })),
+    )
+  }, [bets.data, payments.data])
+  return balances
+}

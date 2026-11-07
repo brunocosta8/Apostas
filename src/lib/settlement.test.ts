@@ -206,3 +206,41 @@ describe('money', () => {
     expect(formatSigned(-1).replace(/\s/g, ' ')).toBe('−0,01 €')
   })
 })
+
+import { optionOdds, potentialPayout } from './settlement'
+
+describe('Cotas e ganho potencial', () => {
+  const ctx = (mode: string, entries: StakeEntry[], oc: number | null = null, ot: number | null = null) =>
+    ({ mode, creatorId: 'ana', oddsCreator: oc, oddsTaker: ot, entries })
+
+  it('1v1 à espera de adversário: lado contrário paga 2,00; lado do criador ainda sem cota', () => {
+    const c = ctx('one_v_one', [e('ana', 'sim', 500)])
+    expect(optionOdds(c, 'nao')).toBe(2)
+    expect(optionOdds(c, 'sim')).toBeNull()
+  })
+  it('1v1 aceite: ambos 2,00 e já não há cota para entrar', () => {
+    const c = ctx('one_v_one', [e('ana', 'sim', 500), e('bruno', 'nao', 500)])
+    expect(optionOdds(c, 'sim')).toBe(2)
+    expect(optionOdds(c, 'nao')).toBe(2)
+  })
+  it('odds 2:1: quem aceita tem cota 3,00 (põe 10 €, recebe 30 €)', () => {
+    const c = ctx('odds', [e('ana', 'sim', 2000)], 2, 1)
+    expect(optionOdds(c, 'nao')).toBe(3)
+  })
+  it('aberta: cota = pote / total da opção', () => {
+    const c = ctx('pool', [e('ana', 'x', 1000), e('carla', 'x', 200), e('bruno', 'y', 300), e('dina', 'y', 300)])
+    expect(optionOdds(c, 'x')).toBe(1.5)
+    expect(optionOdds(c, 'y')).toBe(3)
+  })
+  it('opção vazia em aberta/múltipla: sem cota', () => {
+    expect(optionOdds(ctx('multi', [e('ana', '1', 100)]), '2')).toBeNull()
+  })
+  it('ganho potencial inclui a própria entrada no pote', () => {
+    // pote atual 6 € (X: 4 €, Y: 2 €); entro com 2 € em Y → Y = 4 €, pote 8 € → recebo 4 €
+    expect(potentialPayout([e('a', 'x', 400), e('b', 'y', 200)], 'y', 200)).toBe(400)
+    // 1v1: aceito 5 € contra 5 € → recebo 10 €
+    expect(potentialPayout([e('ana', 'sim', 500)], 'nao', 500)).toBe(1000)
+    // ninguém do outro lado → só recupero o que pus
+    expect(potentialPayout([e('a', 'x', 400)], 'x', 100)).toBe(100)
+  })
+})

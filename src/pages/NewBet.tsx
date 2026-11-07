@@ -5,7 +5,7 @@ import { parseEuros } from '../lib/money'
 import { toLocalInput } from '../lib/dates'
 import { MODE_LABEL } from '../lib/labels'
 import type { BetMode } from '../lib/types'
-import { Button, Card, ErrorBox, Field, Hero, inputClass, Money, Vs } from '../components/ui'
+import { Button, Card, ErrorBox, Field, SubHeader, inputClass, Money, Vs } from '../components/ui'
 
 const MODES: { mode: BetMode; icon: string; desc: string; available: boolean }[] = [
   { mode: 'one_v_one', icon: '🥊', desc: 'Uma pessoa aceita o lado contrário, com o mesmo valor.', available: true },
@@ -64,9 +64,7 @@ export function NewBet() {
 
   return (
     <>
-      <Hero title={<>Nova <span className="text-volt">aposta</span></>}>
-        <p className="mt-1 text-sm text-white/70">Lança o desafio ao grupo.</p>
-      </Hero>
+      <SubHeader back="/" title="Nova aposta" />
       <form onSubmit={submit} className="space-y-5">
         <div>
           <span className="mb-1.5 block font-display text-sm font-bold uppercase tracking-wide text-ink/70">Modo</span>
@@ -82,7 +80,7 @@ export function NewBet() {
                 }`}
               >
                 <span className="text-xl">{m.icon}</span>
-                <span className="mt-1 block font-display text-lg font-extrabold uppercase leading-tight text-ink">{MODE_LABEL[m.mode]}</span>
+                <span className="mt-1 block text-base font-bold leading-tight text-ink">{MODE_LABEL[m.mode]}</span>
                 <span className="mt-0.5 block text-xs leading-snug text-ink/55">{m.available ? m.desc : 'Em breve'}</span>
               </button>
             ))}

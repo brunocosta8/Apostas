@@ -57,7 +57,7 @@ src/
   lib/settlement.ts      cálculos (ganhos, saldos, simplificação de dívidas)
   lib/settlement.test.ts testes unitários de todos os modos
   lib/api.ts             leitura de dados e chamadas às funções do Supabase
-  pages/                 ecrãs (Início, Nova, Detalhe, Saldos, Histórico, Perfil, Admin)
+  pages/                 ecrãs (Início, Boletins, Criar, Detalhe, Saldos, Perfil, Admin)
   sw.ts                  service worker (cache offline; push na Fase 3)
 supabase/
   migrations/            esquema, regras de segurança, funções, cron

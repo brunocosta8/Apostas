@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth, useMe } from '../auth'
 import { useProfiles, useUpdateDisplayName } from '../lib/api'
-import { Avatar, Button, Card, ErrorBox, Field, Hero, inputClass } from '../components/ui'
+import { Avatar, Button, Card, ErrorBox, Field, SubHeader, inputClass } from '../components/ui'
 
 export function ProfilePage() {
   const { me, isAdmin } = useMe()
@@ -17,7 +17,8 @@ export function ProfilePage() {
 
   return (
     <>
-      <Hero>
+      <SubHeader title="Perfil" />
+      <div className="pitch mb-4 rounded-xl p-4 text-white">
         <div className="flex items-center gap-4">
           <Avatar profile={current} size={64} ring />
           <div className="min-w-0">
@@ -26,7 +27,7 @@ export function ProfilePage() {
             {isAdmin && <span className="mt-1.5 inline-block rounded-md bg-volt px-2 py-0.5 font-display text-xs font-bold uppercase text-ink">Admin</span>}
           </div>
         </div>
-      </Hero>
+      </div>
 
       <Card className="mb-4 space-y-3">
         <Field label="Nome a mostrar">

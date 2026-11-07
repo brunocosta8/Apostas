@@ -8,7 +8,7 @@ import { Home } from './pages/Home'
 import { NewBet } from './pages/NewBet'
 import { BetDetail } from './pages/BetDetail'
 import { Balances } from './pages/Balances'
-import { History } from './pages/History'
+import { MyBets } from './pages/MyBets'
 import { ProfilePage } from './pages/Profile'
 import { Admin } from './pages/Admin'
 
@@ -35,7 +35,8 @@ export function App() {
           <Route path="nova" element={<NewBet />} />
           <Route path="aposta/:id" element={<BetDetail />} />
           <Route path="saldos" element={<Balances />} />
-          <Route path="historico" element={<History />} />
+          <Route path="minhas" element={<MyBets />} />
+          <Route path="historico" element={<Navigate to="/minhas?tab=grupo" replace />} />
           <Route path="perfil" element={<ProfilePage />} />
           <Route path="admin" element={<Admin />} />
           <Route path="*" element={<Navigate to="/" replace />} />

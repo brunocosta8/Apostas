@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom'
-import type { Bet, Profile } from '../lib/types'
+import { Link, useNavigate } from 'react-router-dom'
+import type { Bet, BetOption, Profile } from '../lib/types'
 import { effectiveStatus, MODE_LABEL, statusLabel } from '../lib/labels'
 import { formatDateTime, relative } from '../lib/dates'
-import { Avatar, Badge, Money, Vs, type Tone } from './ui'
-import { settleBet } from '../lib/settlement'
-import { toSettleable } from '../lib/api'
+import { Avatar, Badge, formatCota, Money, type Tone } from './ui'
+import { optionOdds, settleBet } from '../lib/settlement'
+import { toOddsContext, toSettleable } from '../lib/api'
+import { useOpenSlip } from './BetSlip'
 
 export function statusTone(bet: Bet): Tone {
   switch (effectiveStatus(bet)) {
@@ -15,116 +16,126 @@ export function statusTone(bet: Bet): Tone {
   }
 }
 
-const ACCENT: Record<Tone, string> = {
-  live: 'border-l-pitch-500',
-  waiting: 'border-l-volt',
-  done: 'border-l-ink',
-  muted: 'border-l-ink/15',
-  mode: 'border-l-pitch-200',
-  volt: 'border-l-volt',
+const MODE_ICON: Record<Bet['mode'], string> = { one_v_one: '🥊', pool: '👥', odds: '📈', multi: '🔢' }
+
+/** Pode o utilizador entrar nesta opção? */
+export function canJoin(bet: Bet, meId: string, optionId: string): boolean {
+  if (effectiveStatus(bet) !== 'open') return false
+  if (bet.bet_entries.some((e) => e.user_id === meId)) return false
+  if (bet.mode === 'one_v_one' || bet.mode === 'odds') {
+    const creator = bet.bet_entries.find((e) => e.user_id === bet.creator_id)
+    return bet.bet_entries.length < 2 && !!creator && creator.option_id !== optionId
+  }
+  return true
 }
 
-type ById = Map<string, Profile>
+/** Botão de cota de uma opção (estilo casa de apostas). */
+export function OptionButton({ bet, option, meId, large }: { bet: Bet; option: BetOption; meId: string; large?: boolean }) {
+  const openSlip = useOpenSlip()
+  const cota = optionOdds(toOddsContext(bet), option.id)
+  const mine = bet.bet_entries.some((e) => e.user_id === meId && e.option_id === option.id)
+  const decided = (bet.status === 'resolved' || bet.status === 'void') && !!bet.winning_option_id
+  const won = decided && bet.winning_option_id === option.id
+  const joinable = canJoin(bet, meId, option.id)
+  const count = bet.bet_entries.filter((e) => e.option_id === option.id).length
 
-export function BetCard({ bet, byId, meId }: { bet: Bet; byId: ById; meId: string }) {
+  let cls = 'bg-paper text-ink'
+  if (won) cls = 'bg-volt text-ink'
+  else if (decided) cls = 'bg-paper text-ink/40'
+  else if (mine) cls = 'bg-pitch-700 text-white'
+  if (joinable) cls += ' ring-1 ring-pitch-200 hover:bg-pitch-50 active:bg-pitch-100'
+
+  return (
+    <button
+      type="button"
+      disabled={!joinable}
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        openSlip({ bet, optionId: option.id })
+      }}
+      className={`flex min-w-0 flex-col items-center justify-center rounded-lg px-2 text-center transition disabled:cursor-default ${large ? 'min-h-16 py-2' : 'min-h-12 py-1.5'} ${cls}`}
+    >
+      <span className={`line-clamp-1 w-full font-medium ${large ? 'text-sm' : 'text-xs'} ${mine && !decided ? 'text-white/80' : 'opacity-70'}`}>
+        {won && '🏆 '}{option.label}
+      </span>
+      <span className={`font-display font-extrabold leading-tight ${large ? 'text-xl' : 'text-[17px]'}`}>
+        {cota ? formatCota(cota) : count > 0 ? '—' : joinable ? 'Entrar' : '—'}
+      </span>
+      {large && <span className="text-[11px] font-medium opacity-60">{count} {count === 1 ? 'jogador' : 'jogadores'}{mine && ' · tu'}</span>}
+    </button>
+  )
+}
+
+export function BetCard({ bet, byId, meId }: { bet: Bet; byId: Map<string, Profile>; meId: string }) {
+  const navigate = useNavigate()
   const status = effectiveStatus(bet)
   const pot = bet.bet_entries.reduce((a, e) => a + Number(e.amount_cents), 0)
   const myNet = status === 'resolved' ? settleBet(toSettleable(bet)).get(meId) : undefined
   const creator = byId.get(bet.creator_id)
-  const tone = statusTone(bet)
   const faded = status === 'void' || status === 'cancelled'
+  const cols = bet.bet_options.length === 2 ? 'grid-cols-2' : bet.bet_options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
 
-  let deadline: string
-  if (status === 'open') deadline = `Fecha ${relative(bet.closes_at)} · ${formatDateTime(bet.closes_at)}`
-  else if (status === 'closed') deadline = `Resultado previsto ${relative(bet.resolve_by)}`
-  else deadline = formatDateTime(bet.resolved_at ?? bet.cancelled_at ?? bet.closed_at ?? bet.created_at)
+  let when: string
+  if (status === 'open') when = `Fecha ${relative(bet.closes_at)}`
+  else if (status === 'closed') when = `Resultado ${relative(bet.resolve_by)}`
+  else when = formatDateTime(bet.resolved_at ?? bet.cancelled_at ?? bet.closed_at ?? bet.created_at)
 
   return (
-    <Link
-      to={`/aposta/${bet.id}`}
-      className={`block overflow-hidden rounded-2xl border-l-[6px] bg-white shadow-sm ring-1 ring-ink/5 transition active:scale-[0.99] ${ACCENT[tone]} ${faded ? 'opacity-70' : ''}`}
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(`/aposta/${bet.id}`)}
+      onKeyDown={(e) => e.key === 'Enter' && navigate(`/aposta/${bet.id}`)}
+      className={`cursor-pointer rounded-xl bg-white p-3 shadow-[0_1px_2px_rgba(13,27,18,0.06)] transition active:bg-white/70 ${faded ? 'opacity-60' : ''}`}
     >
-      <div className="p-4 pb-3">
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <Badge tone={tone}>{statusLabel(bet)}</Badge>
-          <Badge tone="mode">{MODE_LABEL[bet.mode]}</Badge>
-        </div>
-        <h3 className="font-display text-[22px] font-extrabold uppercase leading-tight text-ink">{bet.title}</h3>
-        <p className="mt-0.5 text-xs font-medium text-ink/50">por {creator?.display_name ?? '—'}</p>
-
-        <div className="mt-3">
-          {bet.bet_options.length === 2 ? <Matchup bet={bet} byId={byId} /> : <OptionsSummary bet={bet} />}
-        </div>
+      <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-ink/50">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span aria-hidden>{MODE_ICON[bet.mode]}</span>
+          <span className="truncate uppercase tracking-wide">{MODE_LABEL[bet.mode]} · {creator?.display_name ?? '—'}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <Badge tone={statusTone(bet)}>{statusLabel(bet)}</Badge>
+        </span>
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-dashed border-ink/10 bg-paper/60 px-4 py-2.5">
-        <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink/60">
-          <ClockIcon />
-          <span className="truncate">{deadline}</span>
-        </span>
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-ink">{bet.title}</h3>
+        <span className="shrink-0 pt-0.5 text-[11px] font-semibold text-ink/50">{when}</span>
+      </div>
+
+      <div className={`mt-2.5 grid gap-1.5 ${cols}`}>
+        {bet.bet_options.map((o) => <OptionButton key={o.id} bet={bet} option={o} meId={meId} />)}
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <div className="flex -space-x-1.5">
+            {bet.bet_entries.slice(0, 5).map((e) => <Avatar key={e.id} profile={byId.get(e.user_id)} size={20} ring />)}
+          </div>
+          <span className="text-[11px] font-semibold text-ink/50">
+            {bet.bet_entries.length} {bet.bet_entries.length === 1 ? 'jogador' : 'jogadores'}
+          </span>
+        </div>
         {myNet !== undefined ? (
-          <Money cents={myNet} signed className="shrink-0 font-display text-xl font-extrabold" />
+          <Money cents={myNet} signed className="font-display text-lg font-extrabold" />
         ) : (
-          <span className="shrink-0 font-display text-sm font-bold uppercase text-ink/50">
-            Pote <Money cents={pot} className="text-xl font-extrabold text-ink" />
+          <span className="text-[11px] font-semibold uppercase text-ink/50">
+            Pote <Money cents={pot} className="font-display text-base font-extrabold text-ink" />
           </span>
         )}
       </div>
+    </div>
+  )
+}
+
+export function ResolveBanner({ count }: { count: number }) {
+  if (count === 0) return null
+  return (
+    <Link to="/minhas?tab=resolver" className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-volt px-4 py-3 font-semibold text-ink shadow-[0_2px_0_var(--color-volt-dark)]">
+      <span>🏁 Tens {count} {count === 1 ? 'aposta' : 'apostas'} para marcar o resultado</span>
+      <span aria-hidden className="text-xl">›</span>
     </Link>
   )
 }
 
-/** Duas opções: "Lado A  VS  Lado B" com os apostadores de cada lado. */
-function Matchup({ bet, byId }: { bet: Bet; byId: ById }) {
-  const [a, b] = bet.bet_options
-  const side = (optId: string) => bet.bet_entries.filter((e) => e.option_id === optId)
-  const won = (optId: string) => bet.status === 'resolved' && bet.winning_option_id === optId
-  const Col = ({ optId, label, align }: { optId: string; label: string; align: 'left' | 'right' }) => {
-    const entries = side(optId)
-    return (
-      <div className={`min-w-0 flex-1 rounded-xl px-3 py-2 ${won(optId) ? 'bg-volt/35' : 'bg-pitch-50'} ${align === 'right' ? 'text-right' : ''}`}>
-        <div className="line-clamp-2 text-sm font-bold leading-snug text-ink">{won(optId) && '🏆 '}{label}</div>
-        <div className={`mt-1.5 flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
-          {entries.length === 0 ? (
-            <span className="text-xs font-semibold text-pitch-700">À espera…</span>
-          ) : (
-            <div className="flex -space-x-1.5">
-              {entries.slice(0, 4).map((e) => <Avatar key={e.id} profile={byId.get(e.user_id)} size={22} ring />)}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-  return (
-    <div className="flex items-stretch gap-2">
-      <Col optId={a.id} label={a.label} align="left" />
-      <div className="flex items-center"><Vs size={30} /></div>
-      <Col optId={b.id} label={b.label} align="right" />
-    </div>
-  )
-}
-
-function OptionsSummary({ bet }: { bet: Bet }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {bet.bet_options.map((o) => {
-        const n = bet.bet_entries.filter((e) => e.option_id === o.id).length
-        const won = bet.status === 'resolved' && bet.winning_option_id === o.id
-        return (
-          <span key={o.id} className={`rounded-lg px-2.5 py-1 text-xs font-bold ${won ? 'bg-volt text-ink' : 'bg-pitch-50 text-pitch-800'}`}>
-            {won && '🏆 '}{o.label} · {n}
-          </span>
-        )
-      })}
-    </div>
-  )
-}
-
-function ClockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden>
-      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
-    </svg>
-  )
-}

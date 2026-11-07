@@ -4,7 +4,7 @@ import { toSettleable, useBets, useDeletePayment, usePayments, useProfiles, useR
 import { betProfits, computeBalances, simplifyDebts, type Transfer } from '../lib/settlement'
 import { formatEuros, parseEuros } from '../lib/money'
 import { formatDate } from '../lib/dates'
-import { Avatar, Button, Card, ErrorBox, Hero, inputClass, Loading, Money, Section } from '../components/ui'
+import { Avatar, Button, Card, ErrorBox, SubHeader, inputClass, Loading, Money, Section } from '../components/ui'
 
 type ById = ReturnType<typeof useProfiles>['byId']
 
@@ -23,8 +23,8 @@ export function Balances() {
     return { balances, profits: betProfits(settleable), transfers: simplifyDebts(balances) }
   }, [bets.data, payments.data])
 
-  if (bets.isPending || payments.isPending) return <><Hero title="Saldos" /><Loading /></>
-  if (bets.error || payments.error || !data) return <><Hero title="Saldos" /><ErrorBox error={bets.error ?? payments.error} /></>
+  if (bets.isPending || payments.isPending) return <><SubHeader title="Saldos" /><Loading /></>
+  if (bets.error || payments.error || !data) return <><SubHeader title="Saldos" /><ErrorBox error={bets.error ?? payments.error} /></>
 
   const name = (id: string) => byId.get(id)?.display_name ?? '—'
   const myBalance = data.balances.get(me.id) ?? 0
@@ -34,8 +34,8 @@ export function Balances() {
 
   return (
     <>
-      <Hero title="Saldos">
-        <div className="mt-4 rounded-2xl bg-black/20 px-4 py-4 text-center">
+      <SubHeader title="Saldos" />
+        <div className="pitch mb-6 rounded-xl px-4 py-5 text-center text-white shadow-[0_3px_0_var(--color-volt)]">
           <div className="font-display text-xs font-bold uppercase tracking-wider text-white/60">O teu saldo</div>
           <Money
             cents={myBalance}
@@ -46,7 +46,7 @@ export function Balances() {
             {myBalance > 0 ? 'Tens a receber' : myBalance < 0 ? 'Tens a pagar' : 'Estás em dia ✓'}
           </div>
         </div>
-      </Hero>
+
 
       <Section title="Quem deve a quem" empty="Ninguém deve nada a ninguém. 🎉">
         {data.transfers.map((t) => (

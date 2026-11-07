@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useMe } from '../auth'
 import { useAddAllowedEmail, useAllowedEmails, useProfiles, useRemoveAllowedEmail, useSetAdmin } from '../lib/api'
-import { Avatar, Badge, Button, Card, ErrorBox, Hero, inputClass, Loading } from '../components/ui'
+import { Avatar, Badge, Button, Card, ErrorBox, SubHeader, inputClass, Loading } from '../components/ui'
 
 export function Admin() {
   const { me, isAdmin } = useMe()
@@ -14,7 +14,7 @@ export function Admin() {
   const [email, setEmail] = useState('')
 
   if (!isAdmin) return <Navigate to="/" replace />
-  if (list.isPending) return <><Hero back="/perfil" title="Membros" /><Loading /></>
+  if (list.isPending) return <><SubHeader back="/perfil" title="Membros" /><Loading /></>
 
   const profileByEmail = new Map((profiles ?? []).map((p) => [p.email.toLowerCase(), p]))
 
@@ -27,9 +27,8 @@ export function Admin() {
 
   return (
     <>
-      <Hero back="/perfil" title="Membros">
-        <p className="mt-2 text-sm text-white/75">Só estas contas Google podem entrar. Remover alguém tira-lhe o acesso, mas mantém o histórico e as dívidas.</p>
-      </Hero>
+      <SubHeader back="/perfil" title="Membros" />
+        <p className="mb-4 text-sm text-ink/60">Só estas contas Google podem entrar. Remover alguém tira-lhe o acesso, mas mantém o histórico e as dívidas.</p>
 
       <form onSubmit={submit} className="mb-4 flex gap-2">
         <input className={inputClass} type="email" placeholder="email@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />

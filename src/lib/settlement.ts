@@ -174,3 +174,43 @@ export function oddsTakerAmount(creatorCents: number, oddsCreator: number, oddsT
 function assertCents(n: number) {
   if (!Number.isSafeInteger(n) || n < 0) throw new Error(`Valor inválido em cêntimos: ${n}`)
 }
+
+export interface OddsContext {
+  mode: string
+  creatorId: string
+  oddsCreator: number | null
+  oddsTaker: number | null
+  entries: StakeEntry[]
+}
+
+/**
+ * "Cota" de uma opção, ao estilo das casas de apostas: quanto recebe (no total)
+ * cada euro apostado nessa opção se ela ganhar.
+ *   - Opção com apostadores: pote / total apostado nessa opção.
+ *   - Opção vazia em 1v1/odds: cota para quem aceitar (o valor de entrada é fixo).
+ *   - Opção vazia em aberta/múltipla, ou sem adversários: null (ainda não há cota).
+ */
+export function optionOdds(ctx: OddsContext, optionId: string): number | null {
+  const pot = ctx.entries.reduce((a, e) => a + e.amountCents, 0)
+  const side = ctx.entries.filter((e) => e.optionId === optionId).reduce((a, e) => a + e.amountCents, 0)
+  if (side > 0) {
+    const r = pot / side
+    return r > 1 ? r : null
+  }
+  if (ctx.mode === 'one_v_one' || ctx.mode === 'odds') {
+    const creator = ctx.entries.find((e) => e.userId === ctx.creatorId)
+    if (!creator || creator.optionId === optionId || ctx.entries.length >= 2) return null
+    const stake = ctx.mode === 'one_v_one'
+      ? creator.amountCents
+      : oddsTakerAmount(creator.amountCents, Number(ctx.oddsCreator), Number(ctx.oddsTaker))
+    return (pot + stake) / stake
+  }
+  return null
+}
+
+/** Quanto recebe (total, incluindo o que apostou) quem entrar com `stake` em `optionId`, se ganhar. */
+export function potentialPayout(entries: StakeEntry[], optionId: string, stake: number): number {
+  const me = '__simulacao__'
+  const net = netForOutcome([...entries, { userId: me, optionId, amountCents: stake }], optionId).get(me) ?? 0
+  return stake + net
+}
