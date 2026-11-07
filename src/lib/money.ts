@@ -26,3 +26,11 @@ export function parseEuros(input: string): number | null {
   const cents = Number(int) * 100 + Number(dec.padEnd(2, '0'))
   return Number.isSafeInteger(cents) ? cents : null
 }
+
+/** "1,5" → 1.5 (até 2 casas decimais, > 0). Para odds. Devolve null se inválido. */
+export function parseOddsNumber(input: string): number | null {
+  const s = input.trim().replace(',', '.')
+  if (!/^\d{1,6}(\.\d{1,2})?$/.test(s)) return null
+  const n = Number(s)
+  return n > 0 ? n : null
+}

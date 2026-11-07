@@ -10,7 +10,7 @@ PWA para um grupo fixo de amigos registar apostas entre si. Alguém cria uma apo
 |---|---|---|
 | 0 | Projeto, PWA, login Google, lista de membros, admin | ✅ |
 | 1 | Aposta 1 contra 1 (criar, aceitar, fechar, resolver, desfazer, cancelar), saldos, "quem deve a quem", marcar como pago, histórico | ✅ |
-| 2 | Modos aberta a vários, com odds e escolha múltipla (UI de criação) | ⏳ (backend e cálculos já suportam) |
+| 2 | Modos aberta a vários, com odds e escolha múltipla; cotas e boletim | ✅ |
 | 3 | Notificações push + aviso "a fechar em breve" | ⏳ |
 
 ## Stack

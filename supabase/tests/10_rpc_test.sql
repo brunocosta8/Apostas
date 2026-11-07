@@ -203,6 +203,43 @@ select public.join_bet(:'bet8', :'b8_no');
 select t_assert((select amount_cents from public.bet_entries where bet_id = :'bet7' and user_id = auth.uid()) = 500, 'odds 2:1 → 5 €');
 select t_assert((select amount_cents from public.bet_entries where bet_id = :'bet8' and user_id = auth.uid()) = 33, 'odds 3:1 de 1 € → 0,33 €');
 
+-- Paridade com oddsTakerAmount() do cliente (src/lib/settlement.test.ts)
+:asA
+\o
+select public.create_bet('Odds 1,5:1', '', 'odds', now()+interval '1 day', now()+interval '2 days', array['Sim','Não'], 0, 1000, 1.5, 1) as bet9 \gset
+select id as b9_no from public.bet_options where bet_id = :'bet9' and position = 1 \gset
+select public.create_bet('Odds meio cêntimo', '', 'odds', now()+interval '1 day', now()+interval '2 days', array['Sim','Não'], 0, 105, 2, 1) as bet10 \gset
+select id as b10_no from public.bet_options where bet_id = :'bet10' and position = 1 \gset
+select public.create_bet('Odds 1,1:1', '', 'odds', now()+interval '1 day', now()+interval '2 days', array['Sim','Não'], 0, 1000, 1.1, 1) as bet11 \gset
+select id as b11_no from public.bet_options where bet_id = :'bet11' and position = 1 \gset
+\o /dev/null
+:asB
+select public.join_bet(:'bet9', :'b9_no');
+select public.join_bet(:'bet10', :'b10_no');
+select public.join_bet(:'bet11', :'b11_no');
+select t_assert((select amount_cents from public.bet_entries where bet_id = :'bet9' and user_id = auth.uid()) = 667, 'odds 1,5:1 de 10 € → 6,67 €');
+select t_assert((select amount_cents from public.bet_entries where bet_id = :'bet10' and user_id = auth.uid()) = 53, 'odds 2:1 de 1,05 € → 0,53 €');
+select t_assert((select amount_cents from public.bet_entries where bet_id = :'bet11' and user_id = auth.uid()) = 909, 'odds 1,1:1 de 10 € → 9,09 €');
+:asC
+select t_expect_error(format('select public.join_bet(%L, %L)', :'bet9', :'b9_no'), 'já aceitou');
+
+-- Escolha múltipla com vários vencedores na mesma opção e 12 opções no máximo
+:asA
+select t_expect_error($$select public.create_bet('x','', 'multi', now()+interval '1 day', now()+interval '1 day',
+  array['1','2','3','4','5','6','7','8','9','10','11','12','13'], 0, 100)$$, '2 a 12');
+\o
+select public.create_bet('Multi', '', 'multi', now()+interval '1 day', now()+interval '2 days', array['1','X','2'], 1, 300) as bet12 \gset
+select id as b12_x from public.bet_options where bet_id = :'bet12' and position = 1 \gset
+select id as b12_1 from public.bet_options where bet_id = :'bet12' and position = 0 \gset
+\o /dev/null
+:asB
+select public.join_bet(:'bet12', :'b12_x', 100);
+select t_expect_error(format('select public.join_bet(%L, %L, 50)', :'bet12', :'b12_x'), 'Já entraste');
+:asC
+select public.join_bet(:'bet12', :'b12_1', 1);  -- 1 cêntimo (sem mínimo)
+:asA
+select t_assert(public.resolve_bet(:'bet12', :'b12_x') = 'resolved', 'multi com 2 vencedores resolvida');
+
 -- ---- Pagamentos -------------------------------------------------------------
 :asC
 select t_expect_error(format('select public.record_payment(%L, %L, 100)', :'A', :'B'), 'quem paga ou quem recebe');

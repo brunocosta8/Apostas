@@ -244,3 +244,20 @@ describe('Cotas e ganho potencial', () => {
     expect(potentialPayout([e('a', 'x', 400)], 'x', 100)).toBe(100)
   })
 })
+
+import { parseOddsNumber } from './money'
+
+describe('parseOddsNumber', () => {
+  it('aceita inteiros e decimais com vírgula ou ponto', () => {
+    expect(parseOddsNumber('2')).toBe(2)
+    expect(parseOddsNumber('1,5')).toBe(1.5)
+    expect(parseOddsNumber('0.25')).toBe(0.25)
+  })
+  it('rejeita zero, negativos, texto e mais de 2 casas', () => {
+    expect(parseOddsNumber('0')).toBeNull()
+    expect(parseOddsNumber('-1')).toBeNull()
+    expect(parseOddsNumber('abc')).toBeNull()
+    expect(parseOddsNumber('1,234')).toBeNull()
+    expect(parseOddsNumber('')).toBeNull()
+  })
+})
