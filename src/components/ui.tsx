@@ -122,7 +122,7 @@ export function Tabs<T extends string>({ value, onChange, items }: {
         const active = it.value === value
         return (
           <button key={it.value} onClick={() => onChange(it.value)}
-            className={`relative shrink-0 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${active ? 'text-pitch-700' : 'text-ink/50'}`}>
+            className={`relative shrink-0 px-3 pb-3 pt-4 text-sm font-semibold transition ${active ? 'text-pitch-700' : 'text-ink/50'}`}>
             {it.label}
             {it.count !== undefined && it.count > 0 && (
               <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold ${active ? 'bg-pitch-700 text-white' : 'bg-ink/10 text-ink/60'}`}>{it.count}</span>
