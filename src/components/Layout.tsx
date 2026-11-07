@@ -3,6 +3,7 @@ import { useMe } from '../auth'
 import { useBalances, useRealtimeRefresh } from '../lib/api'
 import { formatSigned } from '../lib/money'
 import { BetSlipProvider } from './BetSlip'
+import { NotificationsWelcome } from './Notifications'
 
 const items = [
   { to: '/', label: 'Início', icon: 'M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z' },
@@ -14,10 +15,12 @@ const items = [
 
 export function Layout() {
   useRealtimeRefresh(true)
+  const { me } = useMe()
   return (
     <BetSlipProvider>
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
         <AppBar />
+        <NotificationsWelcome userId={me.id} />
         <main className="flex-1 px-4 pb-28">
           <Outlet />
         </main>

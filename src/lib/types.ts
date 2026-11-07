@@ -9,6 +9,12 @@ export interface Profile {
   avatar_url: string | null
 }
 
+export type NotifyKey = 'notify_new_bet' | 'notify_joined' | 'notify_closing' | 'notify_result'
+
+export interface NotificationPrefs extends Record<NotifyKey, boolean> {
+  notifications_prompted_at: string | null
+}
+
 export interface BetOption {
   id: string
   bet_id: string

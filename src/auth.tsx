@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { errorMessage, supabase } from './lib/supabase'
+import { disablePush } from './lib/push'
 import type { Profile } from './lib/types'
 
 type AuthState =
@@ -69,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) setState({ kind: 'signedOut', error: errorMessage(error) })
     },
     signOut: async () => {
+      // Este dispositivo deixa de receber notificações desta conta.
+      await disablePush().catch(() => {})
       await supabase.auth.signOut()
       setState({ kind: 'signedOut' })
     },

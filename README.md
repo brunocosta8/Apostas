@@ -11,7 +11,7 @@ PWA para um grupo fixo de amigos registar apostas entre si. Alguém cria uma apo
 | 0 | Projeto, PWA, login Google, lista de membros, admin | ✅ |
 | 1 | Aposta 1 contra 1 (criar, aceitar, fechar, resolver, desfazer, cancelar), saldos, "quem deve a quem", marcar como pago, histórico | ✅ |
 | 2 | Modos aberta a vários, com odds e escolha múltipla; cotas e boletim | ✅ |
-| 3 | Notificações push + aviso "a fechar em breve" | ⏳ |
+| 3 | Notificações push (nova aposta, entraram na tua, a fechar em breve, resultado), aviso inicial e preferências | ✅ |
 
 ## Stack
 
@@ -28,7 +28,7 @@ PWA para um grupo fixo de amigos registar apostas entre si. Alguém cria uma apo
 
 ### Limitações do plano gratuito
 
-- **O projeto é pausado após 7 dias sem atividade.** A GitHub Action `keepalive.yml` faz um pedido de 3 em 3 dias para o evitar (ver passo 7). Se mesmo assim for pausado, reativa-se no painel do Supabase sem perder dados.
+- **O projeto é pausado após 7 dias sem atividade.** A GitHub Action `keepalive.yml` faz um pedido de 3 em 3 dias para o evitar (ver passo 8). Se mesmo assim for pausado, reativa-se no painel do Supabase sem perder dados.
 - 500 MB de base de dados e 50 000 utilizadores ativos por mês, muito acima do que um grupo de amigos usa.
 - Notificações push (Fase 3) via Web Push/VAPID, **sem custos**. No iPhone exigem iOS 16.4+ e a app adicionada ao ecrã principal. É uma limitação da Apple.
 
@@ -58,9 +58,12 @@ src/
   lib/settlement.test.ts testes unitários de todos os modos
   lib/api.ts             leitura de dados e chamadas às funções do Supabase
   pages/                 ecrãs (Início, Boletins, Criar, Detalhe, Saldos, Perfil, Admin)
-  sw.ts                  service worker (cache offline; push na Fase 3)
+  lib/push.ts            subscrição de notificações neste dispositivo
+  components/Notifications.tsx  aviso inicial e definições de notificações
+  sw.ts                  service worker (cache offline e notificações)
 supabase/
   migrations/            esquema, regras de segurança, funções, cron
+  functions/send-push/   Edge Function que envia as notificações
   tests/                 testes SQL (correm num Postgres normal)
 ```
 
@@ -83,6 +86,7 @@ supabase/
 2. `20261107000100_cron.sql`
 3. `20261107000200_realtime.sql`
 4. `20261107000300_ping.sql`
+5. `20261108000000_notifications.sql` (Fase 3, notificações; ver passo 7)
 
 **Opção B, Supabase CLI:**
 
@@ -145,7 +149,59 @@ O `vercel.json` já encaminha todas as rotas para o `index.html` (necessário pa
 - **Android (Chrome):** menu ⋮ → **Instalar app**.
 - **iPhone (Safari):** Partilhar → **Adicionar ao ecrã principal**.
 
-### 7. (Recomendado) Evitar a pausa do Supabase
+### 7. Notificações push
+
+As notificações usam Web Push (gratuito) e são enviadas por uma Edge Function do Supabase.
+
+**7.1 Base de dados:** no SQL Editor, corre `supabase/migrations/20261108000000_notifications.sql`.
+
+**7.2 Chaves VAPID:** são um par de chaves que identifica o teu servidor de notificações. Para gerar:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Gera também um segredo aleatório qualquer (ex.: 30 letras e números) para proteger a função.
+
+**7.3 Edge Function:** no Supabase, **Edge Functions → Deploy a new function → Via Editor**:
+- Nome: `send-push`.
+- Cola o conteúdo de `supabase/functions/send-push/index.ts` e carrega em **Deploy**.
+- Nos detalhes da função, desliga **Verify JWT** / *Enforce JWT verification*. A função já se protege com o segredo.
+
+**7.4 Secrets da função:** em **Edge Functions → Secrets**, adiciona:
+
+| Nome | Valor |
+|---|---|
+| `VAPID_PUBLIC_KEY` | chave pública |
+| `VAPID_PRIVATE_KEY` | chave privada |
+| `VAPID_SUBJECT` | `mailto:o-teu-email@gmail.com` |
+| `PUSH_WEBHOOK_SECRET` | o segredo aleatório |
+
+**7.5 Ligar a base de dados à função:** no SQL Editor, corre:
+
+```sql
+insert into public.push_config (key, value) values
+  ('function_url', 'https://<ref-do-projeto>.supabase.co/functions/v1/send-push'),
+  ('webhook_secret', '<o mesmo segredo do passo 7.4>')
+on conflict (key) do update set value = excluded.value;
+```
+
+**7.6 Vercel:** em *Settings → Environment Variables*, adiciona `VITE_VAPID_PUBLIC_KEY` com a **chave pública**. Depois faz **Redeploy** em *Deployments*.
+
+**7.7 Testar:** abre a app, aceita o aviso "Queres ser avisado?" (ou vai a **Perfil → Notificações**) e pede a outra pessoa para criar uma aposta.
+
+Se algo não chegar:
+- Em **Edge Functions → send-push → Logs**, vê se a função foi chamada e se houve erros.
+- No SQL Editor, `select * from net._http_response order by id desc limit 5;` mostra as respostas às chamadas feitas pela base de dados.
+
+> **iPhone:** as notificações só funcionam com iOS 16.4+ e com a app adicionada ao ecrã principal, aberta a partir do ícone.
+
+**Como funciona:**
+- As alterações às apostas colocam mensagens numa fila (`notification_queue`), só para quem tem esse tipo de notificação ligado. Cada pessoa escolhe os tipos em *Perfil → Notificações*.
+- Cada nova mensagem chama a Edge Function, que envia para todos os dispositivos da pessoa e apaga os dispositivos que já não existem.
+- A cada 5 minutos, o `pg_cron` envia os avisos "a fechar em breve" (2 horas antes do prazo, a quem ainda não entrou) e reenvia o que tenha ficado por enviar.
+
+### 8. (Recomendado) Evitar a pausa do Supabase
 
 No GitHub: **Settings → Secrets and variables → Actions → New repository secret**:
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
-import type { AllowedEmail, Bet, BetMode, Payment, Profile } from './types'
+import type { AllowedEmail, Bet, BetMode, NotificationPrefs, Payment, Profile } from './types'
 import { computeBalances, type OddsContext, type SettleableBet } from './settlement'
 
 // ---------------------------------------------------------------------------
@@ -214,4 +214,41 @@ export function useBalances() {
     )
   }, [bets.data, payments.data])
   return balances
+}
+
+// ---------------------------------------------------------------------------
+// Preferências de notificações
+// ---------------------------------------------------------------------------
+export function useMyPrefs(userId: string) {
+  return useQuery({
+    queryKey: ['prefs', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('notify_new_bet,notify_joined,notify_closing,notify_result,notifications_prompted_at')
+        .eq('id', userId)
+        .single()
+      if (error) throw error
+      return data as NotificationPrefs
+    },
+  })
+}
+
+export function useUpdatePrefs(userId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (patch: Partial<NotificationPrefs>) => {
+      const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
+      if (error) throw error
+    },
+    // Atualização otimista: o interruptor muda logo.
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ['prefs', userId] })
+      const prev = qc.getQueryData<NotificationPrefs>(['prefs', userId])
+      if (prev) qc.setQueryData(['prefs', userId], { ...prev, ...patch })
+      return { prev }
+    },
+    onError: (_e, _p, ctx) => ctx?.prev && qc.setQueryData(['prefs', userId], ctx.prev),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['prefs', userId] }),
+  })
 }

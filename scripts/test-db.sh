@@ -9,4 +9,4 @@ psql -v ON_ERROR_STOP=1 -q -d postgres -c "drop database if exists $DB" -c "crea
 run() { psql -v ON_ERROR_STOP=1 -q -X -d "$DB" -f "$1"; }
 run supabase/tests/00_auth_stub.sql
 for f in supabase/migrations/*.sql; do run "$f"; done
-run supabase/tests/10_rpc_test.sql
+for f in supabase/tests/[1-9]*_test.sql; do run "$f"; done

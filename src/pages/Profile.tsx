@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth, useMe } from '../auth'
 import { useProfiles, useUpdateDisplayName } from '../lib/api'
 import { Avatar, Button, Card, ErrorBox, Field, SubHeader, inputClass } from '../components/ui'
+import { NotificationSettings } from '../components/Notifications'
 
 export function ProfilePage() {
   const { me, isAdmin } = useMe()
@@ -41,9 +42,11 @@ export function ProfilePage() {
         </Button>
       </Card>
 
+      <NotificationSettings userId={me.id} />
+
       {!standalone && (
         <Card className="mb-4 border-l-[6px] border-volt text-sm text-ink/75">
-          <h2 className="mb-1 font-display text-lg font-extrabold uppercase italic text-ink">📲 Instalar no telemóvel</h2>
+          <h2 className="mb-1 text-base font-bold text-ink">📲 Instalar no telemóvel</h2>
           {isIOS ? (
             <p>No Safari, toca em <b>Partilhar</b> (o quadrado com a seta) e depois em <b>Adicionar ao ecrã principal</b>.
               É necessário para receber notificações no iPhone.</p>
