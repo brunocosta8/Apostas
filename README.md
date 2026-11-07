@@ -47,6 +47,10 @@ PWA para um grupo fixo de amigos registar apostas entre si. Alguém cria uma apo
   - Data de resolução ultrapassada → só aviso visual.
 - O criador pode **fechar as entradas antes do prazo**, **desfazer o resultado** e **cancelar** a aposta a qualquer momento. Um admin também pode desfazer e cancelar.
 - **Marcar como pago:** qualquer uma das duas partes (quem paga ou quem recebe) pode registar e apagar o pagamento. Pode ser parcial.
+- **Apostas secretas:** o criador escolhe membros que **não veem** a aposta.
+  - Para essas pessoas não aparece nada: nem a aposta, nem as notificações, nem os pagamentos dela. O servidor garante isto.
+  - Só o criador sabe de quem a aposta está escondida.
+  - As contas de cada aposta secreta são acertadas à parte, só entre quem participou. Não entram no "quem deve a quem" geral nem na classificação, para não revelarem nada a quem não a vê.
 - **"Quem deve a quem"** é calculado a partir dos saldos líquidos, minimizando transferências: no máximo n−1.
 - Remover alguém da lista de membros tira-lhe o acesso, mas mantém o histórico e as dívidas.
 
@@ -87,6 +91,7 @@ supabase/
 3. `20261107000200_realtime.sql`
 4. `20261107000300_ping.sql`
 5. `20261108000000_notifications.sql` (Fase 3, notificações; ver passo 7)
+6. `20261109000000_secret_bets.sql` (apostas secretas)
 
 **Opção B, Supabase CLI:**
 

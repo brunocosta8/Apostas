@@ -1,4 +1,5 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useMe } from '../auth'
 import { useBalances, useRealtimeRefresh } from '../lib/api'
 import { formatSigned } from '../lib/money'
@@ -16,6 +17,9 @@ const items = [
 export function Layout() {
   useRealtimeRefresh(true)
   const { me } = useMe()
+  const { pathname } = useLocation()
+  // Cada ecrã novo começa no topo.
+  useEffect(() => window.scrollTo(0, 0), [pathname])
   return (
     <BetSlipProvider>
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
@@ -56,6 +60,9 @@ export function Layout() {
 /** Barra de topo fixa: logótipo e saldo. */
 function AppBar() {
   const { me } = useMe()
+  const { pathname } = useLocation()
+  // Cada ecrã novo começa no topo.
+  useEffect(() => window.scrollTo(0, 0), [pathname])
   const balances = useBalances()
   const bal = balances?.get(me.id) ?? 0
   return (

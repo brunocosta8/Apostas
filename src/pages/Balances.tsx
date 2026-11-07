@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMe } from '../auth'
-import { toSettleable, useBets, useDeletePayment, usePayments, useProfiles, useRecordPayment } from '../lib/api'
-import { betProfits, computeBalances, simplifyDebts, type Transfer } from '../lib/settlement'
+import { toSettleable, useBets, useDeletePayment, useLedger, usePayments, useProfiles, useRecordPayment } from '../lib/api'
+import { betProfits, type Transfer } from '../lib/settlement'
 import { formatEuros, parseEuros } from '../lib/money'
 import { formatDate } from '../lib/dates'
 import { Avatar, Button, Card, ErrorBox, SubHeader, inputClass, Loading, Money, Section } from '../components/ui'
@@ -15,13 +16,12 @@ export function Balances() {
   const { byId, data: profiles } = useProfiles()
   const del = useDeletePayment()
 
-  const data = useMemo(() => {
-    if (!bets.data || !payments.data) return null
-    const settleable = bets.data.map(toSettleable)
-    const pays = payments.data.map((p) => ({ fromUser: p.from_user, toUser: p.to_user, amountCents: Number(p.amount_cents) }))
-    const balances = computeBalances(settleable, pays)
-    return { balances, profits: betProfits(settleable), transfers: simplifyDebts(balances) }
-  }, [bets.data, payments.data])
+  const ledger = useLedger()
+  // Classificação só com apostas normais, para ser igual para todos.
+  const profits = useMemo(() => betProfits((bets.data ?? []).filter((b) => !b.is_secret).map(toSettleable)), [bets.data])
+  const data = ledger && { balances: ledger.total, transfers: ledger.publicTransfers, profits }
+  const betById = new Map((bets.data ?? []).map((b) => [b.id, b]))
+  const mySecret = (ledger?.secret ?? []).filter((s) => s.transfers.some((t) => t.from === me.id || t.to === me.id))
 
   if (bets.isPending || payments.isPending) return <><SubHeader title="Saldos" /><Loading /></>
   if (bets.error || payments.error || !data) return <><SubHeader title="Saldos" /><ErrorBox error={bets.error ?? payments.error} /></>
@@ -54,6 +54,20 @@ export function Balances() {
         ))}
       </Section>
 
+      {mySecret.length > 0 && (
+        <Section title="🔒 Apostas secretas">
+          <p className="-mt-1 text-xs text-ink/50">Estas contas são acertadas à parte, só entre quem participou.</p>
+          {mySecret.map((s) => (
+            <div key={s.betId} className="space-y-2">
+              <Link to={`/aposta/${s.betId}`} className="block truncate text-sm font-bold text-pitch-700">🔒 {betById.get(s.betId)?.title ?? 'Aposta secreta'} ›</Link>
+              {s.transfers.filter((t) => t.from === me.id || t.to === me.id).map((t) => (
+                <TransferRow key={`${s.betId}-${t.from}-${t.to}`} t={t} meId={me.id} name={name} byId={byId} betId={s.betId} />
+              ))}
+            </div>
+          ))}
+        </Section>
+      )}
+
       <Section title="Classificação">
         <Card className="overflow-hidden p-0">
           <ol>
@@ -69,7 +83,7 @@ export function Balances() {
             ))}
           </ol>
         </Card>
-        <p className="text-xs text-ink/45">Lucro acumulado em apostas resolvidas.</p>
+        <p className="text-xs text-ink/45">Lucro acumulado em apostas resolvidas (sem contar apostas secretas).</p>
       </Section>
 
       <ErrorBox error={del.error} />
@@ -78,10 +92,10 @@ export function Balances() {
           <Card key={p.id} className="flex items-center justify-between gap-3 py-3">
             <div className="min-w-0 text-sm">
               <div className="truncate">
-                <b>{name(p.from_user)}</b> <span className="text-ink/50">pagou a</span> <b>{name(p.to_user)}</b>
+                {p.bet_id && <span title="Aposta secreta">🔒 </span>}<b>{name(p.from_user)}</b> <span className="text-ink/50">pagou a</span> <b>{name(p.to_user)}</b>
               </div>
               <div className="truncate text-xs text-ink/45">
-                {formatDate(p.created_at)} · por {name(p.created_by)}{p.note && ` · ${p.note}`}
+                {formatDate(p.created_at)} · por {name(p.created_by)}{p.bet_id && ` · ${betById.get(p.bet_id)?.title ?? 'aposta secreta'}`}{p.note && ` · ${p.note}`}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
@@ -109,7 +123,7 @@ function Position({ n }: { n: number }) {
   )
 }
 
-function TransferRow({ t, meId, name, byId }: { t: Transfer; meId: string; name: (id: string) => string; byId: ById }) {
+function TransferRow({ t, meId, name, byId, betId }: { t: Transfer; meId: string; name: (id: string) => string; byId: ById; betId?: string }) {
   const record = useRecordPayment()
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState(formatEuros(t.amountCents).replace(/[^\d,]/g, ''))
@@ -144,7 +158,7 @@ function TransferRow({ t, meId, name, byId }: { t: Transfer; meId: string; name:
           <div className="flex gap-2">
             <Button variant="ghost" className="flex-1" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button className="flex-1" disabled={!cents} loading={record.isPending}
-              onClick={() => cents && record.mutate({ from: t.from, to: t.to, amountCents: cents, note }, { onSuccess: () => setOpen(false) })}>
+              onClick={() => cents && record.mutate({ from: t.from, to: t.to, amountCents: cents, note, betId }, { onSuccess: () => setOpen(false) })}>
               Confirmar
             </Button>
           </div>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useMyPrefs, useUpdatePrefs } from '../lib/api'
 import { disablePush, enablePush, getPushState, isIOS, type PushState } from '../lib/push'
 import type { NotifyKey } from '../lib/types'
-import { Button, Card, ErrorBox, Spinner } from './ui'
+import { Button, Card, ErrorBox, Spinner, Toggle } from './ui'
 
 export const NOTIFICATION_KINDS: { key: NotifyKey; icon: string; title: string; desc: string }[] = [
   { key: 'notify_new_bet', icon: '🆕', title: 'Novas apostas', desc: 'Quando alguém do grupo lança uma aposta.' },
@@ -20,23 +20,6 @@ function usePushState() {
   }, [])
   useEffect(refresh, [refresh])
   return [state, refresh] as const
-}
-
-/** Interruptor simples. */
-export function Toggle({ checked, onChange, disabled, label }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition disabled:opacity-40 ${checked ? 'bg-pitch-600' : 'bg-ink/20'}`}
-    >
-      <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
-    </button>
-  )
 }
 
 function InstallHint() {

@@ -48,8 +48,11 @@ export interface Bet {
   resolved_at: string | null
   cancelled_at: string | null
   created_at: string
+  is_secret: boolean
   bet_options: BetOption[]
   bet_entries: BetEntry[]
+  /** Só preenchido para o criador (RLS). */
+  bet_excluded?: { email: string }[]
 }
 
 export interface Payment {
@@ -60,6 +63,13 @@ export interface Payment {
   note: string
   created_by: string
   created_at: string
+  bet_id: string | null
+}
+
+export interface Member {
+  email: string
+  display_name: string | null
+  user_id: string | null
 }
 
 export interface AllowedEmail {

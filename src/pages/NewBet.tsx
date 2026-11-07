@@ -1,12 +1,13 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCreateBet } from '../lib/api'
+import { useMe } from '../auth'
+import { useCreateBet, useMembers } from '../lib/api'
 import { formatEuros, parseEuros, parseOddsNumber } from '../lib/money'
 import { toLocalInput } from '../lib/dates'
 import { MODE_LABEL } from '../lib/labels'
 import { oddsTakerAmount } from '../lib/settlement'
 import type { BetMode } from '../lib/types'
-import { Button, Card, ErrorBox, Field, SubHeader, formatCota, inputClass, Vs } from '../components/ui'
+import { Button, Card, ErrorBox, Field, SubHeader, Toggle, formatCota, inputClass, Vs } from '../components/ui'
 
 const MODES: { mode: BetMode; icon: string; desc: string }[] = [
   { mode: 'one_v_one', icon: '🥊', desc: 'Uma pessoa aceita o lado contrário, com o mesmo valor.' },
@@ -37,6 +38,8 @@ export function NewBet() {
   const [closesAt, setClosesAt] = useState(toLocalInput(inHours(24)))
   const [resolveBy, setResolveBy] = useState(toLocalInput(inHours(48)))
   const [formError, setFormError] = useState<string | null>(null)
+  const [secret, setSecret] = useState(false)
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
 
   const isMulti = mode === 'multi'
   const opts = isMulti ? options : options.slice(0, 2)
@@ -73,6 +76,7 @@ export function NewBet() {
     }
     if (isNaN(closes.getTime()) || closes.getTime() <= Date.now()) return setFormError('A data limite para entrar tem de ser no futuro.')
     if (isNaN(resolve.getTime()) || resolve < closes) return setFormError('A data de resolução não pode ser antes da data limite.')
+    if (secret && hidden.size === 0) return setFormError('Escolhe pelo menos uma pessoa que não pode ver a aposta.')
 
     create.mutate(
       {
@@ -85,6 +89,7 @@ export function NewBet() {
         creatorOption: mine,
         amountCents,
         ...(mode === 'odds' ? { oddsCreator: oc!, oddsTaker: ot! } : {}),
+        hiddenEmails: secret ? [...hidden] : [],
       },
       { onSuccess: (id) => navigate(`/aposta/${id as string}`, { replace: true }) },
     )
@@ -181,6 +186,8 @@ export function NewBet() {
           </Summary>
         </Card>
 
+        <SecretPicker secret={secret} setSecret={setSecret} hidden={hidden} setHidden={setHidden} />
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Data limite para entrar">
             <input type="datetime-local" className={inputClass} value={closesAt} onChange={(e) => setClosesAt(e.target.value)} />
@@ -263,5 +270,68 @@ function MultiOptions({ options, myOption, setOption, setMyOption, add, remove }
         </button>
       )}
     </div>
+  )
+}
+
+/** Aposta secreta: escolher quem NÃO vê a aposta. */
+function SecretPicker({ secret, setSecret, hidden, setHidden }: {
+  secret: boolean; setSecret: (v: boolean) => void; hidden: Set<string>; setHidden: (s: Set<string>) => void
+}) {
+  const { me } = useMe()
+  const members = useMembers()
+  const others = (members.data ?? []).filter((m) => m.email !== me.email.toLowerCase())
+  const toggle = (email: string) => {
+    const next = new Set(hidden)
+    if (next.has(email)) next.delete(email)
+    else next.add(email)
+    setHidden(next)
+  }
+  const visibleCount = others.length - hidden.size
+
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="font-bold text-ink">🔒 Aposta secreta</div>
+          <div className="text-xs text-ink/55">Escolhe quem não pode ver esta aposta.</div>
+        </div>
+        <Toggle label="Aposta secreta" checked={secret} onChange={setSecret} />
+      </div>
+      {secret && (
+        <>
+          {members.isPending ? (
+            <p className="text-sm text-ink/50">A carregar membros…</p>
+          ) : (
+            <ul className="divide-y divide-ink/5 rounded-lg bg-paper px-3">
+              {others.map((m) => {
+                const off = hidden.has(m.email)
+                return (
+                  <li key={m.email}>
+                    <label className="flex cursor-pointer items-center justify-between gap-3 py-2.5">
+                      <span className="min-w-0">
+                        <span className={`block truncate text-sm font-semibold ${off ? 'text-ink/40 line-through' : 'text-ink'}`}>{m.display_name ?? m.email}</span>
+                        {!m.display_name && <span className="block text-xs text-ink/45">ainda não entrou na app</span>}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-ink/55">
+                        {off ? 'Não vê' : 'Vê'}
+                        <input type="checkbox" className="h-5 w-5 accent-red-600" checked={off} onChange={() => toggle(m.email)}
+                          aria-label={`Esconder de ${m.display_name ?? m.email}`} />
+                      </span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          {hidden.size > 0 && (
+            <p className="rounded-lg bg-pitch-50 px-3 py-2.5 text-sm text-ink/75">
+              {hidden.size === 1 ? '1 pessoa não vai' : `${hidden.size} pessoas não vão`} ver esta aposta nem receber notificações dela.
+              {visibleCount < 1 && <b className="text-red-600"> Tem de ficar pelo menos uma pessoa a ver.</b>}
+              {' '}As contas desta aposta são acertadas à parte, só entre quem participar.
+            </p>
+          )}
+        </>
+      )}
+    </Card>
   )
 }

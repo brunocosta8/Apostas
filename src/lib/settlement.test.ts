@@ -261,3 +261,47 @@ describe('parseOddsNumber', () => {
     expect(parseOddsNumber('')).toBeNull()
   })
 })
+
+import { computeLedger, type LedgerBet } from './settlement'
+
+describe('Apostas secretas: contas à parte', () => {
+  const lb = (id: string, secret: boolean, win: string, entries: StakeEntry[]): LedgerBet => ({ id, secret, status: 'resolved', winningOptionId: win, entries })
+  const bets = [
+    lb('p1', false, 'x', [e('ana', 'x', 1000), e('gil', 'y', 1000)]), // pública: ana +10, gil −10
+    lb('s1', true, 'x', [e('ana', 'x', 500), e('bruno', 'y', 500)]), // secreta (escondida do gil): ana +5, bruno −5
+  ]
+
+  it('a aposta secreta não entra no "quem deve a quem" geral', () => {
+    const l = computeLedger(bets, [])
+    expect(obj(l.publicBalances)).toEqual({ ana: 1000, gil: -1000 })
+    expect(l.publicTransfers).toEqual([{ from: 'gil', to: 'ana', amountCents: 1000 }])
+  })
+
+  it('cada aposta secreta é acertada só entre quem participou', () => {
+    const l = computeLedger(bets, [])
+    expect(l.secret).toHaveLength(1)
+    expect(l.secret[0].transfers).toEqual([{ from: 'bruno', to: 'ana', amountCents: 500 }])
+  })
+
+  it('o saldo total junta as duas contas', () => {
+    expect(obj(computeLedger(bets, []).total)).toEqual({ ana: 1500, gil: -1000, bruno: -500 })
+  })
+
+  it('pagamentos de aposta secreta só abatem nessa aposta', () => {
+    const l = computeLedger(bets, [{ fromUser: 'bruno', toUser: 'ana', amountCents: 500, betId: 's1' }])
+    expect(l.secret[0].transfers).toEqual([])
+    expect(obj(l.publicBalances)).toEqual({ ana: 1000, gil: -1000 })
+    expect(l.total.get('bruno')).toBe(0)
+  })
+
+  it('quem não vê a aposta secreta (Gil) obtém as mesmas contas gerais', () => {
+    const gilView = computeLedger(bets.filter((b) => !b.secret), [])
+    const anaView = computeLedger(bets, [])
+    expect(gilView.publicTransfers).toEqual(anaView.publicTransfers)
+  })
+
+  it('apostas secretas por resolver não aparecem', () => {
+    const open: LedgerBet = { id: 's2', secret: true, status: 'open', winningOptionId: null, entries: [e('ana', 'x', 100)] }
+    expect(computeLedger([open], []).secret).toEqual([])
+  })
+})

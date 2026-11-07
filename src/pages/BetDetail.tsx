@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMe } from '../auth'
 import {
-  toSettleable, useBets, useCancelBet, useCloseBet, useProfiles, useReopenBet, useResolveBet,
+  toSettleable, useBets, useCancelBet, useCloseBet, useMembers, useProfiles, useReopenBet, useResolveBet,
 } from '../lib/api'
 import { effectiveStatus, formatOdds, MODE_LABEL, statusLabel } from '../lib/labels'
 import { formatDateTime, isPast, relative } from '../lib/dates'
@@ -16,6 +16,7 @@ export function BetDetail() {
   const bets = useBets()
   const { byId } = useProfiles()
   const { me, isAdmin } = useMe()
+  const members = useMembers()
 
   if (bets.isPending) return <><SubHeader back="/" title="Aposta" /><Loading /></>
   if (bets.error) return <><SubHeader back="/" title="Aposta" /><ErrorBox error={bets.error} /></>
@@ -51,6 +52,15 @@ export function BetDetail() {
             {bet.mode === 'odds' && <> · odds <b className="text-ink">{formatOdds(bet.odds_creator, bet.odds_taker)}</b></>}
           </p>
           {bet.description && <p className="mt-3 whitespace-pre-wrap text-sm text-ink/75">{bet.description}</p>}
+          {bet.is_secret && (
+            <p className="mt-3 rounded-lg bg-ink px-3 py-2 text-xs font-semibold text-white">
+              🔒 Aposta secreta
+              {isCreator && bet.bet_excluded && bet.bet_excluded.length > 0 && (
+                <> — escondida de {bet.bet_excluded.map((x) => members.data?.find((m) => m.email === x.email)?.display_name ?? x.email).join(', ')}</>
+              )}
+              <span className="block font-normal text-white/70">As contas são acertadas à parte, só entre quem participou.</span>
+            </p>
+          )}
 
           <dl className="mt-4 grid grid-cols-3 divide-x divide-ink/10 rounded-lg bg-paper py-2.5 text-center">
             <div className="px-1">

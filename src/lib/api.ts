@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
-import type { AllowedEmail, Bet, BetMode, NotificationPrefs, Payment, Profile } from './types'
-import { computeBalances, type OddsContext, type SettleableBet } from './settlement'
+import type { AllowedEmail, Bet, BetMode, Member, NotificationPrefs, Payment, Profile } from './types'
+import { computeLedger, type LedgerBet, type OddsContext, type SettleableBet } from './settlement'
 
 // ---------------------------------------------------------------------------
 // Leituras (o grupo é pequeno: carregamos tudo e filtramos no cliente)
@@ -30,7 +30,7 @@ export function useBets() {
       await supabase.rpc('close_expired_bets')
       const { data, error } = await supabase
         .from('bets')
-        .select('*, bet_options!bet_options_bet_id_fkey(*), bet_entries!bet_entries_bet_id_fkey(*)')
+        .select('*, bet_options!bet_options_bet_id_fkey(*), bet_entries!bet_entries_bet_id_fkey(*), bet_excluded(email)')
         .order('created_at', { ascending: false })
       if (error) throw error
       const bets = data as Bet[]
@@ -96,6 +96,10 @@ export function toSettleable(b: Bet): SettleableBet {
   }
 }
 
+export function toLedgerBet(b: Bet): LedgerBet {
+  return { ...toSettleable(b), id: b.id, secret: b.is_secret }
+}
+
 export function toOddsContext(b: Bet): OddsContext {
   return {
     mode: b.mode,
@@ -135,6 +139,7 @@ export interface CreateBetInput {
   amountCents: number
   oddsCreator?: number
   oddsTaker?: number
+  hiddenEmails?: string[]
 }
 
 export const useCreateBet = () =>
@@ -150,6 +155,7 @@ export const useCreateBet = () =>
       p_amount_cents: i.amountCents,
       p_odds_creator: i.oddsCreator ?? null,
       p_odds_taker: i.oddsTaker ?? null,
+      p_hidden_emails: i.hiddenEmails ?? [],
     }),
   )
 
@@ -170,8 +176,8 @@ export const useCancelBet = () => useRpcMutation((betId: string) => rpc('cancel_
 
 export const useRecordPayment = () =>
   useRpcMutation(
-    (a: { from: string; to: string; amountCents: number; note?: string }) =>
-      rpc('record_payment', { p_from: a.from, p_to: a.to, p_amount_cents: a.amountCents, p_note: a.note ?? '' }),
+    (a: { from: string; to: string; amountCents: number; note?: string; betId?: string }) =>
+      rpc('record_payment', { p_from: a.from, p_to: a.to, p_amount_cents: a.amountCents, p_note: a.note ?? '', p_bet_id: a.betId ?? null }),
     ['payments'],
   )
 
@@ -202,18 +208,35 @@ export const useRemoveAllowedEmail = () =>
     if (error) throw error
   }, ['allowed_emails'])
 
-/** Saldo atual de cada pessoa (apostas resolvidas + pagamentos). */
-export function useBalances() {
+/** Contas: normais (iguais para todos) + uma por aposta secreta. */
+export function useLedger() {
   const bets = useBets()
   const payments = usePayments()
-  const balances = useMemo(() => {
+  return useMemo(() => {
     if (!bets.data || !payments.data) return null
-    return computeBalances(
-      bets.data.map(toSettleable),
-      payments.data.map((p) => ({ fromUser: p.from_user, toUser: p.to_user, amountCents: Number(p.amount_cents) })),
+    return computeLedger(
+      bets.data.map(toLedgerBet),
+      payments.data.map((p) => ({ fromUser: p.from_user, toUser: p.to_user, amountCents: Number(p.amount_cents), betId: p.bet_id })),
     )
   }, [bets.data, payments.data])
-  return balances
+}
+
+/** Saldo total de cada pessoa (apostas resolvidas + pagamentos). */
+export function useBalances() {
+  return useLedger()?.total ?? null
+}
+
+/** Membros do grupo (inclui quem ainda não entrou na app). */
+export function useMembers() {
+  return useQuery({
+    queryKey: ['members'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_members')
+      if (error) throw error
+      return data as Member[]
+    },
+    staleTime: 60_000,
+  })
 }
 
 // ---------------------------------------------------------------------------

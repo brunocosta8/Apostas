@@ -91,6 +91,7 @@ export function BetCard({ bet, byId, meId }: { bet: Bet; byId: Map<string, Profi
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-ink/50">
         <span className="flex min-w-0 items-center gap-1.5">
+          {bet.is_secret && <span title="Aposta secreta" aria-label="Aposta secreta">🔒</span>}
           <span aria-hidden>{MODE_ICON[bet.mode]}</span>
           <span className="truncate uppercase tracking-wide">{MODE_LABEL[bet.mode]} · {creator?.display_name ?? '—'}</span>
         </span>

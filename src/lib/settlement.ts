@@ -214,3 +214,53 @@ export function potentialPayout(entries: StakeEntry[], optionId: string, stake: 
   const net = netForOutcome([...entries, { userId: me, optionId, amountCents: stake }], optionId).get(me) ?? 0
   return stake + net
 }
+
+// ---------------------------------------------------------------------------
+// Apostas secretas: contas à parte
+// ---------------------------------------------------------------------------
+// Uma aposta secreta é invisível para algumas pessoas. Se entrasse no "quem deve
+// a quem" geral, a simplificação podia pôr alguém que não a vê a pagar ou a
+// receber por causa dela. Por isso cada aposta secreta é acertada só entre quem
+// participou, com os seus próprios pagamentos (payments.bet_id).
+
+export interface LedgerBet extends SettleableBet {
+  id: string
+  secret: boolean
+}
+
+export interface LedgerPayment extends PaymentLike {
+  betId: string | null
+}
+
+export interface SecretAccount {
+  betId: string
+  balances: Map<string, number>
+  transfers: Transfer[]
+}
+
+export interface Ledger {
+  /** Saldos das apostas normais + pagamentos normais (iguais para todos os membros). */
+  publicBalances: Map<string, number>
+  publicTransfers: Transfer[]
+  /** Uma conta por aposta secreta resolvida (ou com pagamentos). */
+  secret: SecretAccount[]
+  /** Saldo total de cada pessoa (normal + secretas que quem está a ver conhece). */
+  total: Map<string, number>
+}
+
+export function computeLedger(bets: LedgerBet[], payments: LedgerPayment[]): Ledger {
+  const publicBalances = computeBalances(
+    bets.filter((b) => !b.secret),
+    payments.filter((p) => p.betId === null),
+  )
+  const total = new Map(publicBalances)
+  const secret: SecretAccount[] = []
+  for (const bet of bets.filter((b) => b.secret)) {
+    const pays = payments.filter((p) => p.betId === bet.id)
+    if (bet.status !== 'resolved' && pays.length === 0) continue
+    const balances = computeBalances([bet], pays)
+    for (const [u, v] of balances) total.set(u, (total.get(u) ?? 0) + v)
+    secret.push({ betId: bet.id, balances, transfers: simplifyDebts(balances) })
+  }
+  return { publicBalances, publicTransfers: simplifyDebts(publicBalances), secret, total }
+}
