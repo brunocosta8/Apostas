@@ -18,18 +18,28 @@ interface AuthCtx {
 
 const Ctx = createContext<AuthCtx | null>(null)
 
+// Se o login falhar, o Supabase/Google volta à app com ?error_description=…
+// (na query ou no hash). Guardamos a mensagem para a mostrar no ecrã de login.
+function readUrlError(): string | undefined {
+  const params = new URLSearchParams(`${window.location.search.slice(1)}&${window.location.hash.slice(1)}`)
+  const msg = params.get('error_description') ?? params.get('error') ?? undefined
+  if (msg) window.history.replaceState(null, '', window.location.pathname)
+  return msg ? `Falha no login: ${msg.replace(/\+/g, ' ')}` : undefined
+}
+const urlError = readUrlError()
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ kind: 'loading' })
 
   const load = useCallback(async (session: Session | null) => {
     if (!session) {
-      setState({ kind: 'signedOut' })
+      setState({ kind: 'signedOut', error: urlError })
       return
     }
     const { data, error } = await supabase.rpc('ensure_profile')
     if (error) {
       if (error.code === '42501') setState({ kind: 'noAccess', email: session.user.email ?? '' })
-      else setState({ kind: 'signedOut', error: errorMessage(error) })
+      else setState({ kind: 'signedOut', error: `Erro ao carregar o perfil: ${errorMessage(error)}` })
       return
     }
     const { data: isAdmin } = await supabase.rpc('is_admin')
