@@ -30,7 +30,7 @@ export function useBets() {
       await supabase.rpc('close_expired_bets')
       const { data, error } = await supabase
         .from('bets')
-        .select('*, bet_options(*), bet_entries(*)')
+        .select('*, bet_options!bet_options_bet_id_fkey(*), bet_entries!bet_entries_bet_id_fkey(*)')
         .order('created_at', { ascending: false })
       if (error) throw error
       const bets = data as Bet[]
