@@ -1,152 +1,124 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMe } from '../auth'
-import { toSettleable, useBets, useDeletePayment, useLedger, usePayments, useProfiles, useRecordPayment } from '../lib/api'
-import { betProfits, type Transfer } from '../lib/settlement'
+import { useBets, useDeletePayment, useLedger, usePayments, useProfiles, useRecordPayment } from '../lib/api'
+import type { Transfer } from '../lib/settlement'
 import { formatEuros, parseEuros } from '../lib/money'
 import { formatDate } from '../lib/dates'
 import { Avatar, Button, Card, ErrorBox, SubHeader, inputClass, Loading, Money, Section } from '../components/ui'
 
 type ById = ReturnType<typeof useProfiles>['byId']
 
+/** Uma dívida que me diz respeito (das contas normais ou de uma aposta secreta). */
+interface MyDebt extends Transfer {
+  betId?: string
+}
+
 export function Balances() {
   const { me } = useMe()
   const bets = useBets()
   const payments = usePayments()
-  const { byId, data: profiles } = useProfiles()
+  const { byId } = useProfiles()
+  const ledger = useLedger()
   const del = useDeletePayment()
 
-  const ledger = useLedger()
-  // Classificação só com apostas normais, para ser igual para todos.
-  const profits = useMemo(() => betProfits((bets.data ?? []).filter((b) => !b.is_secret).map(toSettleable)), [bets.data])
-  const data = ledger && { balances: ledger.total, transfers: ledger.publicTransfers, profits }
-  const betById = new Map((bets.data ?? []).map((b) => [b.id, b]))
-  const mySecret = (ledger?.secret ?? []).filter((s) => s.transfers.some((t) => t.from === me.id || t.to === me.id))
-
   if (bets.isPending || payments.isPending) return <><SubHeader back="/" title="Saldos" /><Loading /></>
-  if (bets.error || payments.error || !data) return <><SubHeader back="/" title="Saldos" /><ErrorBox error={bets.error ?? payments.error} /></>
+  if (bets.error || payments.error || !ledger) return <><SubHeader back="/" title="Saldos" /><ErrorBox error={bets.error ?? payments.error} /></>
 
+  const betById = new Map((bets.data ?? []).map((b) => [b.id, b]))
   const name = (id: string) => byId.get(id)?.display_name ?? '—'
-  const myBalance = data.balances.get(me.id) ?? 0
-  const ranking = (profiles ?? [])
-    .map((p) => ({ p, profit: data.profits.get(p.id) ?? 0 }))
-    .sort((a, b) => b.profit - a.profit)
+  const myBalance = ledger.total.get(me.id) ?? 0
+
+  const mine: MyDebt[] = [
+    ...ledger.publicTransfers,
+    ...ledger.secret.flatMap((s) => s.transfers.map((t) => ({ ...t, betId: s.betId }))),
+  ].filter((t) => t.from === me.id || t.to === me.id)
+  const toPay = mine.filter((t) => t.from === me.id).sort((a, b) => b.amountCents - a.amountCents)
+  const toReceive = mine.filter((t) => t.to === me.id).sort((a, b) => b.amountCents - a.amountCents)
+  const myPayments = payments.data.filter((p) => p.from_user === me.id || p.to_user === me.id)
 
   return (
     <>
       <SubHeader back="/" title="Saldos" />
-        <div className="pitch mb-6 rounded-xl px-4 py-5 text-center text-white shadow-[0_3px_0_var(--color-volt)]">
-          <div className="font-display text-xs font-bold uppercase tracking-wider text-white/60">O teu saldo</div>
-          <Money
-            cents={myBalance}
-            signed
-            className={`mt-1 block font-display text-6xl font-extrabold italic leading-none ${myBalance > 0 ? 'text-volt!' : myBalance < 0 ? 'text-red-300!' : 'text-white!'}`}
-          />
-          <div className="mt-1.5 font-display text-sm font-bold uppercase tracking-wide text-white/75">
-            {myBalance > 0 ? 'Tens a receber' : myBalance < 0 ? 'Tens a pagar' : 'Estás em dia ✓'}
-          </div>
+      <div className="pitch mb-6 rounded-xl px-4 py-5 text-center text-white shadow-[0_3px_0_var(--color-volt)]">
+        <div className="font-display text-xs font-bold uppercase tracking-wider text-white/60">O teu saldo</div>
+        <Money
+          cents={myBalance}
+          signed
+          className={`mt-1 block font-display text-6xl font-extrabold italic leading-none ${myBalance > 0 ? 'text-volt!' : myBalance < 0 ? 'text-red-300!' : 'text-white!'}`}
+        />
+        <div className="mt-1.5 font-display text-sm font-bold uppercase tracking-wide text-white/75">
+          {myBalance > 0 ? 'Tens a receber' : myBalance < 0 ? 'Tens a pagar' : 'Estás em dia ✓'}
         </div>
+      </div>
 
-
-      <Section title="Quem deve a quem" empty="Ninguém deve nada a ninguém. 🎉">
-        {data.transfers.map((t) => (
-          <TransferRow key={`${t.from}-${t.to}`} t={t} meId={me.id} name={name} byId={byId} />
+      <Section title="Deves" empty="Não deves nada a ninguém. ✓">
+        {toPay.map((t) => (
+          <DebtRow key={`${t.betId ?? 'g'}-${t.to}`} t={t} meId={me.id} name={name} byId={byId} betTitle={t.betId && betById.get(t.betId)?.title} />
         ))}
       </Section>
 
-      {mySecret.length > 0 && (
-        <Section title="🔒 Apostas secretas">
-          <p className="-mt-1 text-xs text-ink/50">Estas contas são acertadas à parte, só entre quem participou.</p>
-          {mySecret.map((s) => (
-            <div key={s.betId} className="space-y-2">
-              <Link to={`/aposta/${s.betId}`} className="block truncate text-sm font-bold text-pitch-700">🔒 {betById.get(s.betId)?.title ?? 'Aposta secreta'} ›</Link>
-              {s.transfers.filter((t) => t.from === me.id || t.to === me.id).map((t) => (
-                <TransferRow key={`${s.betId}-${t.from}-${t.to}`} t={t} meId={me.id} name={name} byId={byId} betId={s.betId} />
-              ))}
-            </div>
-          ))}
-        </Section>
-      )}
-
-      <Section title="Classificação">
-        <Card className="overflow-hidden p-0">
-          <ol>
-            {ranking.map(({ p, profit }, i) => (
-              <li key={p.id} className={`flex items-center justify-between gap-3 px-4 py-3 ${i % 2 ? 'bg-paper/60' : ''} ${p.id === me.id ? 'bg-pitch-50!' : ''}`}>
-                <span className="flex min-w-0 items-center gap-3">
-                  <Position n={i + 1} />
-                  <Avatar profile={p} size={32} />
-                  <span className={`truncate font-semibold ${p.id === me.id ? 'text-pitch-800' : ''}`}>{p.display_name}</span>
-                </span>
-                <Money cents={profit} signed className="shrink-0 font-display text-xl font-extrabold" />
-              </li>
-            ))}
-          </ol>
-        </Card>
-        <p className="text-xs text-ink/45">Lucro acumulado em apostas resolvidas (sem contar apostas secretas).</p>
+      <Section title="Devem-te" empty="Ninguém te deve nada.">
+        {toReceive.map((t) => (
+          <DebtRow key={`${t.betId ?? 'g'}-${t.from}`} t={t} meId={me.id} name={name} byId={byId} betTitle={t.betId && betById.get(t.betId)?.title} />
+        ))}
       </Section>
 
       <ErrorBox error={del.error} />
-      <Section title="Pagamentos registados" empty="Ainda não há pagamentos registados.">
-        {payments.data.map((p) => (
-          <Card key={p.id} className="flex items-center justify-between gap-3 py-3">
-            <div className="min-w-0 text-sm">
-              <div className="truncate">
-                {p.bet_id && <span title="Aposta secreta">🔒 </span>}<b>{name(p.from_user)}</b> <span className="text-ink/50">pagou a</span> <b>{name(p.to_user)}</b>
+      <Section title="Histórico de pagamentos" empty="Ainda não pagaste nem recebeste nada.">
+        {myPayments.map((p) => {
+          const iPaid = p.from_user === me.id
+          const other = iPaid ? p.to_user : p.from_user
+          return (
+            <Card key={p.id} className="flex items-center gap-3 py-3">
+              <Avatar profile={byId.get(other)} size={34} />
+              <div className="min-w-0 flex-1 text-sm">
+                <div className="truncate font-semibold">
+                  {p.bet_id && <span title="Aposta secreta">🔒 </span>}
+                  {iPaid ? <>Pagaste a {name(other)}</> : <>{name(other)} pagou-te</>}
+                </div>
+                <div className="truncate text-xs text-ink/45">
+                  {formatDate(p.created_at)}{p.bet_id && ` · ${betById.get(p.bet_id)?.title ?? 'aposta secreta'}`}{p.note && ` · ${p.note}`}
+                </div>
               </div>
-              <div className="truncate text-xs text-ink/45">
-                {formatDate(p.created_at)} · por {name(p.created_by)}{p.bet_id && ` · ${betById.get(p.bet_id)?.title ?? 'aposta secreta'}`}{p.note && ` · ${p.note}`}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Money cents={Number(p.amount_cents)} className="font-display text-lg font-extrabold" />
-              {(p.from_user === me.id || p.to_user === me.id) && (
-                <button className="rounded-lg px-2 py-1 text-ink/40 hover:bg-ink/5" title="Desfazer" aria-label="Apagar pagamento"
-                  onClick={() => { if (confirm('Apagar este pagamento?')) del.mutate(p.id) }}>
-                  ✕
-                </button>
-              )}
-            </div>
-          </Card>
-        ))}
+              <Money cents={iPaid ? -Number(p.amount_cents) : Number(p.amount_cents)} signed className="shrink-0 font-display text-lg font-extrabold" />
+              <button className="rounded-lg px-1.5 py-1 text-ink/35 hover:bg-ink/5" title="Desfazer" aria-label="Apagar pagamento"
+                onClick={() => { if (confirm('Apagar este pagamento?')) del.mutate(p.id) }}>
+                ✕
+              </button>
+            </Card>
+          )
+        })}
       </Section>
     </>
   )
 }
 
-function Position({ n }: { n: number }) {
-  const medal = ['bg-volt text-ink', 'bg-zinc-300 text-ink', 'bg-amber-600 text-white'][n - 1]
-  return (
-    <span className={`inline-flex h-7 w-7 shrink-0 -skew-x-6 items-center justify-center rounded-md font-display text-base font-extrabold italic ${medal ?? 'bg-ink/5 text-ink/50'}`}>
-      {n}
-    </span>
-  )
-}
-
-function TransferRow({ t, meId, name, byId, betId }: { t: Transfer; meId: string; name: (id: string) => string; byId: ById; betId?: string }) {
+function DebtRow({ t, meId, name, byId, betTitle }: {
+  t: MyDebt; meId: string; name: (id: string) => string; byId: ById; betTitle?: string | false
+}) {
   const record = useRecordPayment()
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState(formatEuros(t.amountCents).replace(/[^\d,]/g, ''))
   const [note, setNote] = useState('')
-  const involved = t.from === meId || t.to === meId
   const cents = parseEuros(amount)
   const iPay = t.from === meId
+  const other = iPay ? t.to : t.from
 
   return (
-    <Card className={`border-l-[6px] ${involved ? (iPay ? 'border-red-500' : 'border-pitch-500') : 'border-ink/10'}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <Avatar profile={byId.get(t.from)} size={30} />
-          <span className="font-display text-lg font-extrabold text-ink/30">→</span>
-          <Avatar profile={byId.get(t.to)} size={30} />
-          <span className="min-w-0 truncate text-sm">
-            <b>{iPay ? 'Tu' : name(t.from)}</b> <span className="text-ink/50">paga a</span> <b>{t.to === meId ? 'ti' : name(t.to)}</b>
-          </span>
+    <Card>
+      <div className="flex items-center gap-3">
+        <Link to={`/confrontos/${other}`} className="shrink-0"><Avatar profile={byId.get(other)} size={40} /></Link>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-bold text-ink">{iPay ? `Deves a ${name(other)}` : `${name(other)} deve-te`}</div>
+          {t.betId && <div className="truncate text-xs text-ink/50">🔒 {betTitle || 'Aposta secreta'}</div>}
         </div>
-        <Money cents={t.amountCents} className="shrink-0 font-display text-2xl font-extrabold" />
+        <Money cents={t.amountCents} className={`shrink-0 font-display text-2xl font-extrabold ${iPay ? 'text-red-600' : 'text-pitch-600'}`} />
       </div>
-      {involved && !open && (
-        <Button variant="secondary" className="mt-3 w-full" onClick={() => setOpen(true)}>Marcar como pago</Button>
+      {!open && (
+        <Button variant={iPay ? 'secondary' : 'light'} className="mt-3 w-full" onClick={() => setOpen(true)}>
+          {iPay ? 'Já paguei' : 'Já recebi'}
+        </Button>
       )}
       {open && (
         <div className="mt-3 space-y-2">
@@ -158,7 +130,7 @@ function TransferRow({ t, meId, name, byId, betId }: { t: Transfer; meId: string
           <div className="flex gap-2">
             <Button variant="ghost" className="flex-1" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button className="flex-1" disabled={!cents} loading={record.isPending}
-              onClick={() => cents && record.mutate({ from: t.from, to: t.to, amountCents: cents, note, betId }, { onSuccess: () => setOpen(false) })}>
+              onClick={() => cents && record.mutate({ from: t.from, to: t.to, amountCents: cents, note, betId: t.betId }, { onSuccess: () => setOpen(false) })}>
               Confirmar
             </Button>
           </div>
