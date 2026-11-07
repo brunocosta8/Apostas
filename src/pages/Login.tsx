@@ -7,12 +7,16 @@ export function Login({ error }: { error?: string }) {
   const [loading, setLoading] = useState(false)
   return (
     <Splash>
-      <h1 className="text-3xl font-bold text-white">Apostas</h1>
-      <p className="mt-2 text-slate-400">Registo de apostas entre amigos.<br />A app só regista — os pagamentos fazem-se fora.</p>
-      <div className="mt-8 w-full max-w-xs space-y-3">
+      <h1 className="font-display text-6xl font-extrabold uppercase italic leading-none tracking-tight text-white">
+        Apos<span className="text-volt">tas</span>
+      </h1>
+      <p className="mt-3 font-display text-lg font-semibold uppercase tracking-wide text-white/80">Entre amigos · quem perde paga</p>
+      <p className="mt-1 text-sm text-white/60">A app só regista — os pagamentos fazem-se fora.</p>
+      <div className="mt-10 w-full max-w-xs space-y-3">
         <ErrorBox error={error} />
         <Button
-          className="w-full bg-white! text-slate-900! hover:bg-slate-100!"
+          variant="light"
+          className="w-full text-base! shadow-[0_3px_0_rgba(0,0,0,0.25)]"
           loading={loading}
           onClick={() => { setLoading(true); void signIn() }}
         >
@@ -27,14 +31,14 @@ export function NoAccess({ email }: { email: string }) {
   const { signOut, refresh } = useAuth()
   return (
     <Splash>
-      <h1 className="text-2xl font-bold text-white">Sem acesso</h1>
-      <p className="mt-3 text-slate-400">
-        A conta <span className="font-medium text-slate-200">{email}</span> não está na lista de membros do grupo.
+      <h1 className="font-display text-4xl font-extrabold uppercase italic text-white">Fora de jogo</h1>
+      <p className="mt-3 text-white/75">
+        A conta <span className="font-semibold text-volt">{email}</span> não está na lista de membros do grupo.
         Pede ao admin para te adicionar.
       </p>
       <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
         <Button onClick={() => void refresh()}>Já me adicionaram — tentar de novo</Button>
-        <Button variant="ghost" onClick={() => void signOut()}>Entrar com outra conta</Button>
+        <Button variant="ghost" className="text-white/80! hover:bg-white/10!" onClick={() => void signOut()}>Entrar com outra conta</Button>
       </div>
     </Splash>
   )
@@ -42,8 +46,8 @@ export function NoAccess({ email }: { email: string }) {
 
 export function Splash({ children }: { children: React.ReactNode }) {
   return (
-    <div className="pt-safe flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-      <img src="/pwa-192.png" alt="" className="mb-6 h-20 w-20 rounded-2xl" />
+    <div className="pitch pt-safe flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+      <img src="/pwa-192.png" alt="" className="mb-6 h-24 w-24 rotate-[-6deg] rounded-3xl shadow-[0_6px_0_var(--color-volt)]" />
       {children}
     </div>
   )

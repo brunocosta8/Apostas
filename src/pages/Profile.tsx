@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth, useMe } from '../auth'
 import { useProfiles, useUpdateDisplayName } from '../lib/api'
-import { Avatar, Button, Card, ErrorBox, Field, inputClass, PageTitle } from '../components/ui'
+import { Avatar, Button, Card, ErrorBox, Field, Hero, inputClass } from '../components/ui'
 
 export function ProfilePage() {
   const { me, isAdmin } = useMe()
@@ -17,14 +17,16 @@ export function ProfilePage() {
 
   return (
     <>
-      <PageTitle>Perfil</PageTitle>
-      <Card className="mb-4 flex items-center gap-3">
-        <Avatar profile={current} size={52} />
-        <div className="min-w-0">
-          <div className="truncate font-semibold text-white">{current.display_name}</div>
-          <div className="truncate text-sm text-slate-400">{me.email}</div>
+      <Hero>
+        <div className="flex items-center gap-4">
+          <Avatar profile={current} size={64} ring />
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-3xl font-extrabold uppercase italic leading-none">{current.display_name}</h1>
+            <div className="mt-1 truncate text-sm text-white/70">{me.email}</div>
+            {isAdmin && <span className="mt-1.5 inline-block rounded-md bg-volt px-2 py-0.5 font-display text-xs font-bold uppercase text-ink">Admin</span>}
+          </div>
         </div>
-      </Card>
+      </Hero>
 
       <Card className="mb-4 space-y-3">
         <Field label="Nome a mostrar">
@@ -39,8 +41,8 @@ export function ProfilePage() {
       </Card>
 
       {!standalone && (
-        <Card className="mb-4 text-sm text-slate-300">
-          <h2 className="mb-2 font-semibold text-white">Instalar no telemóvel</h2>
+        <Card className="mb-4 border-l-[6px] border-volt text-sm text-ink/75">
+          <h2 className="mb-1 font-display text-lg font-extrabold uppercase italic text-ink">📲 Instalar no telemóvel</h2>
           {isIOS ? (
             <p>No Safari, toca em <b>Partilhar</b> (o quadrado com a seta) e depois em <b>Adicionar ao ecrã principal</b>.
               É necessário para receber notificações no iPhone.</p>
@@ -51,7 +53,7 @@ export function ProfilePage() {
       )}
 
       <div className="space-y-3">
-        {isAdmin && <Link to="/admin" className="block"><Button variant="secondary" className="w-full">Gerir membros (admin)</Button></Link>}
+        {isAdmin && <Link to="/admin" className="block"><Button variant="secondary" className="w-full">Gerir membros</Button></Link>}
         <Button variant="ghost" className="w-full" onClick={() => void signOut()}>Terminar sessão</Button>
       </div>
     </>

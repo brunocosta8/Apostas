@@ -19,7 +19,7 @@ export function App() {
     return (
       <Splash>
         <h1 className="text-xl font-bold text-white">Falta configurar o Supabase</h1>
-        <p className="mt-2 text-slate-400">Define <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code> (ver README).</p>
+        <p className="mt-2 text-white/70">Define <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code> (ver README).</p>
       </Splash>
     )
   }

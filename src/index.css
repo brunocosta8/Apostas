@@ -1,16 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+
+  --color-pitch-50: #eefaf2;
+  --color-pitch-100: #d5f2df;
+  --color-pitch-200: #a9e3bf;
+  --color-pitch-400: #38b866;
+  --color-pitch-500: #16a34a;
+  --color-pitch-600: #0e8a3c;
+  --color-pitch-700: #0b6b30;
+  --color-pitch-800: #095627;
+  --color-pitch-900: #063d1c;
+
+  --color-volt: #ffd60a;
+  --color-volt-dark: #d4a900;
+  --color-ink: #0d1b12;
+  --color-paper: #f2f4ee;
 }
 
 html, body, #root { min-height: 100%; }
 body {
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
 input, textarea, select { font-size: 16px; } /* evita zoom automático no iPhone */
 .pt-safe { padding-top: env(safe-area-inset-top); }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Relvado: riscas de corte de relva */
+.pitch {
+  background-color: var(--color-pitch-700);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.045) 0 44px, transparent 44px 88px),
+    radial-gradient(ellipse at 80% -20%, rgba(255,214,10,0.18), transparent 60%);
+}
+
+@keyframes live-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+.live-dot { animation: live-pulse 1.4s ease-in-out infinite; }
