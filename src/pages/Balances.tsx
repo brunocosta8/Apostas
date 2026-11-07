@@ -33,8 +33,8 @@ export function Balances() {
     ...ledger.publicTransfers,
     ...ledger.secret.flatMap((s) => s.transfers.map((t) => ({ ...t, betId: s.betId }))),
   ].filter((t) => t.from === me.id || t.to === me.id)
-  const toPay = mine.filter((t) => t.from === me.id).sort((a, b) => b.amountCents - a.amountCents)
-  const toReceive = mine.filter((t) => t.to === me.id).sort((a, b) => b.amountCents - a.amountCents)
+  // Primeiro o que deves, depois o que te devem; dentro de cada, do maior para o menor.
+  const debts = [...mine].sort((a, b) => Number(b.from === me.id) - Number(a.from === me.id) || b.amountCents - a.amountCents)
   const myPayments = payments.data.filter((p) => p.from_user === me.id || p.to_user === me.id)
 
   return (
@@ -52,15 +52,9 @@ export function Balances() {
         </div>
       </div>
 
-      <Section title="Deves" empty="Não deves nada a ninguém. ✓">
-        {toPay.map((t) => (
-          <DebtRow key={`${t.betId ?? 'g'}-${t.to}`} t={t} meId={me.id} name={name} byId={byId} betTitle={t.betId && betById.get(t.betId)?.title} />
-        ))}
-      </Section>
-
-      <Section title="Devem-te" empty="Ninguém te deve nada.">
-        {toReceive.map((t) => (
-          <DebtRow key={`${t.betId ?? 'g'}-${t.from}`} t={t} meId={me.id} name={name} byId={byId} betTitle={t.betId && betById.get(t.betId)?.title} />
+      <Section title="Saldos" empty="Estás em dia com toda a gente. ✓">
+        {debts.map((t) => (
+          <DebtRow key={`${t.betId ?? 'g'}-${t.from}-${t.to}`} t={t} meId={me.id} name={name} byId={byId} betTitle={t.betId && betById.get(t.betId)?.title} />
         ))}
       </Section>
 
@@ -108,18 +102,23 @@ function DebtRow({ t, meId, name, byId, betTitle }: {
   return (
     <Card>
       <div className="flex items-center gap-3">
-        <Link to={`/confrontos/${other}`} className="shrink-0"><Avatar profile={byId.get(other)} size={40} /></Link>
+        <Link to={`/confrontos/${other}`} className="shrink-0"><Avatar profile={byId.get(other)} size={36} /></Link>
         <div className="min-w-0 flex-1">
-          <div className="truncate font-bold text-ink">{iPay ? `Deves a ${name(other)}` : `${name(other)} deve-te`}</div>
-          {t.betId && <div className="truncate text-xs text-ink/50">🔒 {betTitle || 'Aposta secreta'}</div>}
+          <div className="truncate font-bold text-ink">{name(other)}</div>
+          <div className="truncate text-xs text-ink/50">
+            {iPay ? 'Deves' : 'Deve-te'}{t.betId && ` · 🔒 ${betTitle || 'Aposta secreta'}`}
+          </div>
         </div>
-        <Money cents={t.amountCents} className={`shrink-0 font-display text-2xl font-extrabold ${iPay ? 'text-red-600' : 'text-pitch-600'}`} />
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <Money cents={iPay ? -t.amountCents : t.amountCents} signed className="font-display text-xl font-extrabold leading-none" />
+          {!open && (
+            <button type="button" onClick={() => setOpen(true)}
+              className="rounded-full bg-pitch-50 px-2.5 py-0.5 text-xs font-bold text-pitch-700 ring-1 ring-pitch-200 active:bg-pitch-100">
+              Liquidar
+            </button>
+          )}
+        </div>
       </div>
-      {!open && (
-        <Button variant={iPay ? 'secondary' : 'light'} className="mt-3 w-full" onClick={() => setOpen(true)}>
-          {iPay ? 'Já paguei' : 'Já recebi'}
-        </Button>
-      )}
       {open && (
         <div className="mt-3 space-y-2">
           <div className="flex gap-2">
