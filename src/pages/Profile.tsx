@@ -57,6 +57,7 @@ export function ProfilePage() {
       )}
 
       <div className="space-y-3">
+        <Link to="/saldos" className="block"><Button variant="light" className="w-full">💶 Saldos e pagamentos</Button></Link>
         {isAdmin && <Link to="/admin" className="block"><Button variant="secondary" className="w-full">Gerir membros</Button></Link>}
         <Button variant="ghost" className="w-full" onClick={() => void signOut()}>Terminar sessão</Button>
       </div>

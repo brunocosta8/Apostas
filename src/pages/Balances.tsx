@@ -23,8 +23,8 @@ export function Balances() {
   const betById = new Map((bets.data ?? []).map((b) => [b.id, b]))
   const mySecret = (ledger?.secret ?? []).filter((s) => s.transfers.some((t) => t.from === me.id || t.to === me.id))
 
-  if (bets.isPending || payments.isPending) return <><SubHeader title="Saldos" /><Loading /></>
-  if (bets.error || payments.error || !data) return <><SubHeader title="Saldos" /><ErrorBox error={bets.error ?? payments.error} /></>
+  if (bets.isPending || payments.isPending) return <><SubHeader back="/" title="Saldos" /><Loading /></>
+  if (bets.error || payments.error || !data) return <><SubHeader back="/" title="Saldos" /><ErrorBox error={bets.error ?? payments.error} /></>
 
   const name = (id: string) => byId.get(id)?.display_name ?? '—'
   const myBalance = data.balances.get(me.id) ?? 0
@@ -34,7 +34,7 @@ export function Balances() {
 
   return (
     <>
-      <SubHeader title="Saldos" />
+      <SubHeader back="/" title="Saldos" />
         <div className="pitch mb-6 rounded-xl px-4 py-5 text-center text-white shadow-[0_3px_0_var(--color-volt)]">
           <div className="font-display text-xs font-bold uppercase tracking-wider text-white/60">O teu saldo</div>
           <Money

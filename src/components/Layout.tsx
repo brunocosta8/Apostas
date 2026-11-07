@@ -11,7 +11,7 @@ const items = [
   { to: '/', label: 'Início', icon: 'M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z' },
   { to: '/minhas', label: 'Boletins', icon: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6' },
   { to: '/nova', label: 'Criar', icon: 'M12 5v14M5 12h14', primary: true },
-  { to: '/saldos', label: 'Saldos', icon: 'M3 7h18v12H3zM3 11h18M7 15h3' },
+  { to: '/confrontos', label: 'Confrontos', icon: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
   { to: '/perfil', label: 'Perfil', icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0' },
 ]
 

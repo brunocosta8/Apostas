@@ -11,6 +11,7 @@ import { Balances } from './pages/Balances'
 import { MyBets } from './pages/MyBets'
 import { ProfilePage } from './pages/Profile'
 import { Admin } from './pages/Admin'
+import { Rival, Rivals } from './pages/Rivals'
 
 export function App() {
   const { state } = useAuth()
@@ -35,6 +36,8 @@ export function App() {
           <Route path="nova" element={<NewBet />} />
           <Route path="aposta/:id" element={<BetDetail />} />
           <Route path="saldos" element={<Balances />} />
+          <Route path="confrontos" element={<Rivals />} />
+          <Route path="confrontos/:id" element={<Rival />} />
           <Route path="minhas" element={<MyBets />} />
           <Route path="historico" element={<Navigate to="/minhas?tab=grupo" replace />} />
           <Route path="perfil" element={<ProfilePage />} />
