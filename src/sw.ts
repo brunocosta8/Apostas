@@ -11,6 +11,6 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
 // SPA: qualquer navegação serve o index.html em cache (funciona offline).
-registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')))
+registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/\.html$/] }))
 
 // Notificações push: Fase 3.
