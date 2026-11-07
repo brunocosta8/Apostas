@@ -48,11 +48,9 @@ export function Rivals() {
         <div className="grid grid-cols-2 gap-3">
           {rows.map(({ profile, h2h }) => {
             const none = h2h.together === 0
-            const accent = none ? 'bg-ink/10' : h2h.net > 0 ? 'bg-pitch-500' : h2h.net < 0 ? 'bg-red-500' : 'bg-ink/25'
             return (
               <Link key={profile.id} to={`/confrontos/${profile.id}`}
-                className={`relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-2xl bg-white p-3 text-center shadow-[0_1px_2px_rgba(13,27,18,0.06)] active:bg-white/70 ${none ? 'opacity-60' : ''}`}>
-                <span className={`absolute inset-x-0 top-0 h-1.5 ${accent}`} aria-hidden />
+                className={`flex aspect-square flex-col items-center justify-center rounded-2xl bg-white p-3 text-center shadow-[0_1px_2px_rgba(13,27,18,0.06)] active:bg-white/70 ${none ? 'opacity-60' : ''}`}>
                 <Avatar profile={profile} size={44} />
                 <div className="mt-1.5 w-full truncate text-sm font-bold text-ink">{profile.display_name}</div>
                 {none ? (
