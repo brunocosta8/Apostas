@@ -45,9 +45,9 @@ export function MyBets() {
           onChange={setTab}
           items={[
             { value: 'curso', label: 'Em curso', count: lists.curso.length },
-            { value: 'resolver', label: 'Para resolver', count: lists.resolver.length },
+            { value: 'resolver', label: 'Resolver', count: lists.resolver.length },
             { value: 'terminadas', label: 'Terminadas' },
-            { value: 'grupo', label: 'Histórico do grupo' },
+            { value: 'grupo', label: 'Grupo' },
           ]}
         />
       </SubHeader>

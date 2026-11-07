@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Profile } from '../lib/types'
 import { formatEuros, formatSigned } from '../lib/money'
@@ -112,25 +112,71 @@ export function SubHeader({ title, back, action, children }: { title?: ReactNode
   )
 }
 
-/** Separadores horizontais com sublinhado (estilo casa de apostas). */
+/**
+ * Separadores ao estilo iOS ("segmented control"): um retângulo branco de cantos
+ * redondos desliza para a opção escolhida. Se não couberem, deslizam na horizontal.
+ */
 export function Tabs<T extends string>({ value, onChange, items }: {
   value: T; onChange: (v: T) => void; items: { value: T; label: string; count?: number }[]
 }) {
+  const refs = useRef(new Map<string, HTMLButtonElement>())
+  const [pill, setPill] = useState<{ x: number; w: number } | null>(null)
+  const [animate, setAnimate] = useState(false)
+
+  const measure = useCallback(() => {
+    const el = refs.current.get(value)
+    if (el) setPill({ x: el.offsetLeft, w: el.offsetWidth })
+  }, [value])
+
+  // Volta a medir se mudar a opção ou os textos/contadores (que mudam as larguras).
+  const itemsKey = items.map((i) => `${i.value}:${i.label}:${i.count ?? ''}`).join('|')
+  useLayoutEffect(() => {
+    measure()
+  }, [measure, itemsKey])
+  useEffect(() => {
+    refs.current.get(value)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  }, [value])
+
+  useEffect(() => {
+    // Só anima depois da primeira medição (não desliza ao abrir o ecrã).
+    const t = setTimeout(() => setAnimate(true), 50)
+    const onResize = () => measure()
+    window.addEventListener('resize', onResize)
+    document.fonts?.ready.then(onResize)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [measure])
+
   return (
-    <div className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
-      {items.map((it) => {
-        const active = it.value === value
-        return (
-          <button key={it.value} onClick={() => onChange(it.value)}
-            className={`relative shrink-0 px-3 pb-3 pt-4 text-sm font-semibold transition ${active ? 'text-pitch-700' : 'text-ink/50'}`}>
-            {it.label}
-            {it.count !== undefined && it.count > 0 && (
-              <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold ${active ? 'bg-pitch-700 text-white' : 'bg-ink/10 text-ink/60'}`}>{it.count}</span>
-            )}
-            {active && <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-t bg-volt" />}
-          </button>
-        )
-      })}
+    <div className="-mx-4 overflow-x-auto px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="relative flex w-max min-w-full rounded-xl bg-ink/[0.07] p-1">
+        {pill && (
+          <span
+            aria-hidden
+            className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(13,27,18,0.15),0_1px_1px_rgba(13,27,18,0.06)] ${animate ? 'transition-[transform,width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none' : ''}`}
+            style={{ transform: `translateX(${pill.x}px)`, width: pill.w }}
+          />
+        )}
+        {items.map((it) => {
+          const active = it.value === value
+          return (
+            <button
+              key={it.value}
+              ref={(el) => { if (el) refs.current.set(it.value, el); else refs.current.delete(it.value) }}
+              onClick={() => onChange(it.value)}
+              aria-pressed={active}
+              className={`relative z-10 flex flex-1 shrink-0 items-center justify-center whitespace-nowrap rounded-[9px] px-2.5 py-1.5 text-sm font-semibold transition-colors duration-200 ${active ? 'text-pitch-700' : 'text-ink/55'}`}
+            >
+              {it.label}
+              {it.count !== undefined && it.count > 0 && (
+                <span className={`ml-1.5 rounded-full px-1.5 py-px text-[11px] font-bold transition-colors duration-200 ${active ? 'bg-pitch-700 text-white' : 'bg-ink/10 text-ink/55'}`}>{it.count}</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

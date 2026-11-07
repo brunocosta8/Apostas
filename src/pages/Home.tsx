@@ -42,8 +42,8 @@ export function Home() {
           items={[
             { value: 'todas', label: 'Em jogo', count: lists.todas.length },
             { value: 'entrar', label: 'Para entrar', count: lists.entrar.length },
-            { value: 'minhas', label: 'As minhas', count: lists.minhas.length },
-            { value: 'aguardar', label: 'À espera de resultado', count: lists.aguardar.length },
+            { value: 'minhas', label: 'Minhas', count: lists.minhas.length },
+            { value: 'aguardar', label: 'À espera', count: lists.aguardar.length },
           ]}
         />
       </SubHeader>
