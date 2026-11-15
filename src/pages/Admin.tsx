@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
+import { VisibilitySheet } from '../components/VisibilitySheet'
 import { useMe } from '../auth'
 import { useAddAllowedEmail, useAllowedEmails, useProfiles, useRemoveAllowedEmail, useSetAdmin } from '../lib/api'
 import { Avatar, Badge, Button, Card, ErrorBox, SubHeader, inputClass, Loading } from '../components/ui'
@@ -12,7 +13,7 @@ export function Admin() {
   const setAdmin = useSetAdmin()
   const remove = useRemoveAllowedEmail()
   const [email, setEmail] = useState('')
-  const navigate = useNavigate()
+  const [sheet, setSheet] = useState<{ email: string; isNew: boolean } | null>(null)
 
   if (!isAdmin) return <Navigate to="/" replace />
   if (list.isPending) return <><SubHeader back="/perfil" title="Membros" /><Loading /></>
@@ -24,7 +25,7 @@ export function Admin() {
     const e = email.trim().toLowerCase()
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return
     // Depois de adicionar, escolher logo que apostas antigas essa pessoa pode ver.
-    add.mutate({ email: e, isAdmin: false }, { onSuccess: () => { setEmail(''); navigate(`/admin/membro/${encodeURIComponent(e)}?novo=1`) } })
+    add.mutate({ email: e, isAdmin: false }, { onSuccess: () => { setEmail(''); setSheet({ email: e, isNew: true }) } })
   }
 
   return (
@@ -54,9 +55,9 @@ export function Admin() {
               </div>
               {!isMe && (
                 <div className="mt-2 flex flex-wrap gap-1 border-t border-ink/5 pt-2">
-                  <Link to={`/admin/membro/${encodeURIComponent(row.email)}`} className="rounded-lg px-2 py-1 text-xs font-semibold text-pitch-700 hover:bg-pitch-50">
+                  <button onClick={() => setSheet({ email: row.email, isNew: false })} className="rounded-lg px-2 py-1 text-xs font-semibold text-pitch-700 hover:bg-pitch-50">
                     👁 Apostas visíveis
-                  </Link>
+                  </button>
                   <button className="rounded-lg px-2 py-1 text-xs font-semibold text-pitch-700 hover:bg-pitch-50"
                     onClick={() => setAdmin.mutate({ email: row.email, isAdmin: !row.is_admin })}>
                     {row.is_admin ? 'Tirar admin' : 'Tornar admin'}
@@ -71,6 +72,7 @@ export function Admin() {
           )
         })}
       </div>
+      {sheet && <VisibilitySheet email={sheet.email} isNew={sheet.isNew} onClose={() => setSheet(null)} />}
     </>
   )
 }
