@@ -11,7 +11,7 @@ type Tab = 'curso' | 'resolver' | 'terminadas' | 'grupo'
 
 /** "Boletins": as minhas apostas (em curso / terminadas) e o histórico do grupo. */
 export function MyBets() {
-  const { me } = useMe()
+  const { me, isAdmin } = useMe()
   const bets = useBets()
   const { byId } = useProfiles()
   const [params, setParams] = useSearchParams()
@@ -27,7 +27,7 @@ export function MyBets() {
 
   const lists: Record<Tab, Bet[]> = {
     curso: bets.data.filter((b) => isIn(b) && !finished(b)),
-    resolver: bets.data.filter((b) => b.creator_id === me.id && effectiveStatus(b) === 'closed'),
+    resolver: bets.data.filter((b) => (b.creator_id === me.id || isAdmin) && effectiveStatus(b) === 'closed'),
     terminadas: bets.data.filter((b) => isIn(b) && finished(b)).sort((a, b) => endDate(b).localeCompare(endDate(a))),
     grupo: bets.data.filter(finished).sort((a, b) => endDate(b).localeCompare(endDate(a))),
   }
