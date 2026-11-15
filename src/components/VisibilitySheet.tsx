@@ -87,7 +87,7 @@ export function VisibilitySheet({ email, isNew, onClose }: { email: string; isNe
                     type="button"
                     onClick={() => toggle(b)}
                     aria-pressed={on}
-                    className={`relative flex min-h-28 flex-col rounded-2xl p-3 text-left transition duration-200 ${
+                    className={`relative flex min-h-28 flex-col rounded-2xl p-3 text-left last:odd:col-span-2 last:odd:w-[calc(50%-0.3125rem)] last:odd:justify-self-center transition duration-200 ${
                       on
                         ? 'bg-white shadow-[0_2px_0_var(--color-pitch-600)] ring-2 ring-pitch-600'
                         : 'bg-white/50 opacity-45 ring-1 ring-ink/10 grayscale'
