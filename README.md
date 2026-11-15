@@ -51,7 +51,7 @@ PWA para um grupo fixo de amigos registar apostas entre si. Alguém cria uma apo
   - Para essas pessoas não aparece nada: nem a aposta, nem as notificações, nem os pagamentos dela. O servidor garante isto.
   - Só o criador sabe de quem a aposta está escondida.
   - As contas de cada aposta secreta são acertadas à parte, só entre quem participou. Não entram no "quem deve a quem" geral nem na classificação, para não revelarem nada a quem não a vê.
-- **Membros novos:** ao adicionar alguém, o admin escolhe que apostas já existentes essa pessoa pode ver. Pode mudar isto depois em *Gerir membros → 👁 Apostas visíveis*. As apostas secretas ficam sempre escondidas de quem entra depois.
+- **Membros novos:** ao adicionar alguém, o admin escolhe que apostas já existentes essa pessoa pode ver. Abre uma janela com as apostas em cartões, todas selecionadas: tocar numa esconde-a. Pode mudar isto depois em *Gerir membros → 👁 Apostas visíveis*. As apostas secretas ficam sempre escondidas de quem entra depois.
 - **Saldos gerais calculados no servidor:** como cada pessoa pode ver apostas diferentes, o servidor calcula os saldos com todas as apostas normais (`public_balances()`). Usa a mesma regra da app, e assim as dívidas são iguais para todos.
 - **Apostas canceladas** não aparecem no histórico nem nos confrontos.
 - **"Quem deve a quem"** é calculado a partir dos saldos líquidos, minimizando transferências: no máximo n−1.
