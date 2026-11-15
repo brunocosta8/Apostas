@@ -123,8 +123,8 @@ export function BetDetail() {
 
         {(isCreator || isAdmin) && (
           <div className="pt-3">
-            <Section title={isCreator ? 'Gerir a aposta' : 'Admin'}>
-              <CreatorActions bet={bet} isCreator={isCreator} />
+            <Section title={isCreator ? 'Gerir a aposta' : 'Gerir a aposta (admin)'}>
+              <CreatorActions bet={bet} />
             </Section>
           </div>
         )}
@@ -137,7 +137,7 @@ function Notice({ children }: { children: React.ReactNode }) {
   return <p className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-ink/60">{children}</p>
 }
 
-function CreatorActions({ bet, isCreator }: { bet: Bet; isCreator: boolean }) {
+function CreatorActions({ bet }: { bet: Bet }) {
   const close = useCloseBet()
   const resolve = useResolveBet()
   const reopen = useReopenBet()
@@ -151,7 +151,7 @@ function CreatorActions({ bet, isCreator }: { bet: Bet; isCreator: boolean }) {
     <div className="space-y-3">
       <ErrorBox error={err} />
 
-      {isCreator && (status === 'open' || status === 'closed') && (
+      {(status === 'open' || status === 'closed') && (
         picking ? (
           <Card className="space-y-2">
             <p className="font-bold">Quem ganhou?</p>
@@ -176,7 +176,7 @@ function CreatorActions({ bet, isCreator }: { bet: Bet; isCreator: boolean }) {
         )
       )}
 
-      {isCreator && bet.status === 'open' && status === 'open' && (
+      {bet.status === 'open' && status === 'open' && (
         <Button variant="secondary" className="w-full" loading={close.isPending}
           onClick={() => { if (confirm('Fechar já as entradas? Se ninguém tiver aceitado, a aposta fica anulada.')) close.mutate(bet.id) }}>
           Fechar entradas agora

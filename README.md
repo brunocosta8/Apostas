@@ -45,7 +45,7 @@ PWA para um grupo fixo de amigos registar apostas entre si. Alguém cria uma apo
   - Ninguém acertou → **anulada**, todos recuperam o que apostaram.
   - Empate → o criador marca "Empate / sem vencedor" → **anulada**.
   - Data de resolução ultrapassada → só aviso visual.
-- O criador pode **fechar as entradas antes do prazo**, **desfazer o resultado** e **cancelar** a aposta a qualquer momento. Um admin também pode desfazer e cancelar.
+- O criador pode **fechar as entradas antes do prazo**, **marcar o resultado**, **desfazer o resultado** e **cancelar** a aposta a qualquer momento. Um **admin pode fazer o mesmo** em qualquer aposta, exceto nas apostas secretas escondidas dele.
 - **Marcar como pago:** qualquer uma das duas partes (quem paga ou quem recebe) pode registar e apagar o pagamento. Pode ser parcial.
 - **Apostas secretas:** o criador escolhe membros que **não veem** a aposta.
   - Para essas pessoas não aparece nada: nem a aposta, nem as notificações, nem os pagamentos dela. O servidor garante isto.
@@ -92,6 +92,7 @@ supabase/
 4. `20261107000300_ping.sql`
 5. `20261108000000_notifications.sql` (Fase 3, notificações; ver passo 7)
 6. `20261109000000_secret_bets.sql` (apostas secretas)
+7. `20261115000000_admin_resolve.sql` (o admin também pode marcar resultados)
 
 **Opção B, Supabase CLI:**
 
