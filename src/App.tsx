@@ -12,6 +12,7 @@ import { MyBets } from './pages/MyBets'
 import { ProfilePage } from './pages/Profile'
 import { Admin } from './pages/Admin'
 import { Rival, Rivals } from './pages/Rivals'
+import { MemberVisibility } from './pages/MemberVisibility'
 
 export function App() {
   const { state } = useAuth()
@@ -42,6 +43,7 @@ export function App() {
           <Route path="historico" element={<Navigate to="/minhas?tab=grupo" replace />} />
           <Route path="perfil" element={<ProfilePage />} />
           <Route path="admin" element={<Admin />} />
+          <Route path="admin/membro/:email" element={<MemberVisibility />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

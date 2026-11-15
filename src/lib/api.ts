@@ -36,7 +36,8 @@ export function useBets() {
       const bets = data as Bet[]
       for (const b of bets) {
         b.bet_options.sort((x, y) => x.position - y.position)
-        b.bet_entries.sort((x, y) => x.created_at.localeCompare(y.created_at))
+        // Mesma ordem que o servidor usa para os cêntimos que sobram (data, depois id).
+        b.bet_entries.sort((x, y) => x.created_at.localeCompare(y.created_at) || x.id.localeCompare(y.id))
       }
       return bets
     },
@@ -212,14 +213,50 @@ export const useRemoveAllowedEmail = () =>
 export function useLedger() {
   const bets = useBets()
   const payments = usePayments()
+  const server = usePublicBalances()
   return useMemo(() => {
-    if (!bets.data || !payments.data) return null
+    if (!bets.data || !payments.data || !server.data) return null
     return computeLedger(
       bets.data.map(toLedgerBet),
       payments.data.map((p) => ({ fromUser: p.from_user, toUser: p.to_user, amountCents: Number(p.amount_cents), betId: p.bet_id })),
+      server.data,
     )
-  }, [bets.data, payments.data])
+  }, [bets.data, payments.data, server.data])
 }
+
+/** Saldos gerais calculados no servidor (iguais para todos os membros). */
+export function usePublicBalances() {
+  // Muda quando mudam apostas ou pagamentos: as mesmas chaves são invalidadas.
+  const bets = useBets()
+  const payments = usePayments()
+  return useQuery({
+    queryKey: ['public_balances', bets.dataUpdatedAt, payments.dataUpdatedAt],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('public_balances')
+      if (error) throw error
+      return new Map((data as { user_id: string; balance_cents: number }[]).map((r) => [r.user_id, Number(r.balance_cents)]))
+    },
+    enabled: !!bets.data && !!payments.data,
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useMemberHiddenBets(email: string) {
+  return useQuery({
+    queryKey: ['member_hidden', email],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('member_hidden_bets', { p_email: email })
+      if (error) throw error
+      return new Set((data as string[]) ?? [])
+    },
+  })
+}
+
+export const useSetMemberHiddenBets = () =>
+  useRpcMutation(
+    (a: { email: string; betIds: string[] }) => rpc('set_member_hidden_bets', { p_email: a.email, p_bet_ids: a.betIds }),
+    ['member_hidden'],
+  )
 
 /** Saldo total de cada pessoa (apostas resolvidas + pagamentos). */
 export function useBalances() {

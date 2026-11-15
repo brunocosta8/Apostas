@@ -305,3 +305,13 @@ describe('Apostas secretas: contas à parte', () => {
     expect(computeLedger([open], []).secret).toEqual([])
   })
 })
+
+describe('Saldos gerais vindos do servidor', () => {
+  it('usa os saldos do servidor (inclui apostas que eu não vejo) e junta as secretas', () => {
+    const secret: LedgerBet = { id: 's', secret: true, status: 'resolved', winningOptionId: 'x', entries: [e('ana', 'x', 100), e('bruno', 'y', 100)] }
+    const server = new Map([['ana', 700], ['gil', -700]])
+    const l = computeLedger([secret], [], server)
+    expect(l.publicTransfers).toEqual([{ from: 'gil', to: 'ana', amountCents: 700 }])
+    expect(obj(l.total)).toEqual({ ana: 800, gil: -700, bruno: -100 })
+  })
+})

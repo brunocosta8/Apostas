@@ -51,6 +51,9 @@ PWA para um grupo fixo de amigos registar apostas entre si. Alguém cria uma apo
   - Para essas pessoas não aparece nada: nem a aposta, nem as notificações, nem os pagamentos dela. O servidor garante isto.
   - Só o criador sabe de quem a aposta está escondida.
   - As contas de cada aposta secreta são acertadas à parte, só entre quem participou. Não entram no "quem deve a quem" geral nem na classificação, para não revelarem nada a quem não a vê.
+- **Membros novos:** ao adicionar alguém, o admin escolhe que apostas já existentes essa pessoa pode ver. Pode mudar isto depois em *Gerir membros → 👁 Apostas visíveis*. As apostas secretas ficam sempre escondidas de quem entra depois.
+- **Saldos gerais calculados no servidor:** como cada pessoa pode ver apostas diferentes, o servidor calcula os saldos com todas as apostas normais (`public_balances()`). Usa a mesma regra da app, e assim as dívidas são iguais para todos.
+- **Apostas canceladas** não aparecem no histórico nem nos confrontos.
 - **"Quem deve a quem"** é calculado a partir dos saldos líquidos, minimizando transferências: no máximo n−1.
 - Remover alguém da lista de membros tira-lhe o acesso, mas mantém o histórico e as dívidas.
 
@@ -93,6 +96,7 @@ supabase/
 5. `20261108000000_notifications.sql` (Fase 3, notificações; ver passo 7)
 6. `20261109000000_secret_bets.sql` (apostas secretas)
 7. `20261115000000_admin_resolve.sql` (o admin também pode marcar resultados)
+8. `20261116000000_member_visibility.sql` (apostas antigas visíveis para membros novos; saldos calculados no servidor)
 
 **Opção B, Supabase CLI:**
 

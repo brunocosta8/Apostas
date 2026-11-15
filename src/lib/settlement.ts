@@ -248,11 +248,18 @@ export interface Ledger {
   total: Map<string, number>
 }
 
-export function computeLedger(bets: LedgerBet[], payments: LedgerPayment[]): Ledger {
-  const publicBalances = computeBalances(
-    bets.filter((b) => !b.secret),
-    payments.filter((p) => p.betId === null),
-  )
+/**
+ * @param serverPublicBalances saldos gerais calculados no servidor com TODAS as
+ *   apostas normais (inclui as que quem está a ver não vê). Se vier, é usado em vez
+ *   do cálculo local, para o "quem deve a quem" ser igual para todos.
+ */
+export function computeLedger(bets: LedgerBet[], payments: LedgerPayment[], serverPublicBalances?: Map<string, number>): Ledger {
+  const publicBalances = serverPublicBalances
+    ? new Map(serverPublicBalances)
+    : computeBalances(
+        bets.filter((b) => !b.secret),
+        payments.filter((p) => p.betId === null),
+      )
   const total = new Map(publicBalances)
   const secret: SecretAccount[] = []
   for (const bet of bets.filter((b) => b.secret)) {

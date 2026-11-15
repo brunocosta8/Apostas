@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useMe } from '../auth'
 import { useAddAllowedEmail, useAllowedEmails, useProfiles, useRemoveAllowedEmail, useSetAdmin } from '../lib/api'
 import { Avatar, Badge, Button, Card, ErrorBox, SubHeader, inputClass, Loading } from '../components/ui'
@@ -12,6 +12,7 @@ export function Admin() {
   const setAdmin = useSetAdmin()
   const remove = useRemoveAllowedEmail()
   const [email, setEmail] = useState('')
+  const navigate = useNavigate()
 
   if (!isAdmin) return <Navigate to="/" replace />
   if (list.isPending) return <><SubHeader back="/perfil" title="Membros" /><Loading /></>
@@ -22,7 +23,8 @@ export function Admin() {
     ev.preventDefault()
     const e = email.trim().toLowerCase()
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return
-    add.mutate({ email: e, isAdmin: false }, { onSuccess: () => setEmail('') })
+    // Depois de adicionar, escolher logo que apostas antigas essa pessoa pode ver.
+    add.mutate({ email: e, isAdmin: false }, { onSuccess: () => { setEmail(''); navigate(`/admin/membro/${encodeURIComponent(e)}?novo=1`) } })
   }
 
   return (
@@ -41,7 +43,7 @@ export function Admin() {
           const p = profileByEmail.get(row.email)
           const isMe = row.email === me.email.toLowerCase()
           return (
-            <Card key={row.email} className="flex items-center justify-between gap-3 py-3">
+            <Card key={row.email} className="py-3">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar profile={p} size={30} />
                 <div className="min-w-0">
@@ -51,7 +53,10 @@ export function Admin() {
                 {row.is_admin && <Badge tone="volt">admin</Badge>}
               </div>
               {!isMe && (
-                <div className="flex shrink-0 gap-1">
+                <div className="mt-2 flex flex-wrap gap-1 border-t border-ink/5 pt-2">
+                  <Link to={`/admin/membro/${encodeURIComponent(row.email)}`} className="rounded-lg px-2 py-1 text-xs font-semibold text-pitch-700 hover:bg-pitch-50">
+                    👁 Apostas visíveis
+                  </Link>
                   <button className="rounded-lg px-2 py-1 text-xs font-semibold text-pitch-700 hover:bg-pitch-50"
                     onClick={() => setAdmin.mutate({ email: row.email, isAdmin: !row.is_admin })}>
                     {row.is_admin ? 'Tirar admin' : 'Tornar admin'}

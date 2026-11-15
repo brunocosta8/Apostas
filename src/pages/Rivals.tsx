@@ -22,7 +22,7 @@ function useHeadToHeads() {
   const profiles = useProfiles()
   const rows = useMemo(() => {
     if (!bets.data || !profiles.data) return null
-    const inputs = bets.data.map(toInput)
+    const inputs = bets.data.filter((b) => b.status !== 'cancelled').map(toInput)
     return profiles.data
       .filter((p) => p.id !== me.id)
       .map((p) => ({ profile: p, h2h: headToHead(inputs, me.id, p.id) }))

@@ -22,11 +22,12 @@ export function MyBets() {
   if (bets.error) return <div className="pt-4"><ErrorBox error={bets.error} /></div>
 
   const isIn = (b: Bet) => b.bet_entries.some((e) => e.user_id === me.id)
-  const finished = (b: Bet) => ['resolved', 'void', 'cancelled'].includes(b.status)
+  // Apostas canceladas não aparecem no histórico (nem em curso).
+  const finished = (b: Bet) => ['resolved', 'void'].includes(b.status)
   const endDate = (b: Bet) => b.resolved_at ?? b.cancelled_at ?? b.closed_at ?? b.created_at
 
   const lists: Record<Tab, Bet[]> = {
-    curso: bets.data.filter((b) => isIn(b) && !finished(b)),
+    curso: bets.data.filter((b) => isIn(b) && !finished(b) && b.status !== 'cancelled'),
     resolver: bets.data.filter((b) => (b.creator_id === me.id || isAdmin) && effectiveStatus(b) === 'closed'),
     terminadas: bets.data.filter((b) => isIn(b) && finished(b)).sort((a, b) => endDate(b).localeCompare(endDate(a))),
     grupo: bets.data.filter(finished).sort((a, b) => endDate(b).localeCompare(endDate(a))),
